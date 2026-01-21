@@ -19,4 +19,3 @@ class JSONReporter(BaseReporter):
 
         report_dict = asdict(report)
         return json.dumps(report_dict, default=serialize, indent=2)
-

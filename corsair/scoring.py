@@ -58,8 +58,7 @@ def calculate_score(findings: List[Finding]) -> int:
 
         if deduction > 0:
             logger.debug(
-                f"Score deduction: -{deduction} for {finding.severity.value} "
-                f"({finding.header})"
+                f"Score deduction: -{deduction} for {finding.severity.value} " f"({finding.header})"
             )
 
     # Clamp to 0-100
@@ -89,4 +88,3 @@ def calculate_grade(score: int) -> str:
         if score >= threshold:
             return grade
     return "F"
-

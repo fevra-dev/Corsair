@@ -44,9 +44,7 @@ class TestHSTSAnalyzer:
         assert short_age[0].severity == Severity.MEDIUM
 
     def test_good_hsts_passes(self):
-        headers = {
-            "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
-        }
+        headers = {"Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"}
         analyzer = HSTSAnalyzer(headers, "https://example.com")
         findings = analyzer.analyze()
 
@@ -70,4 +68,3 @@ class TestXFrameOptionsAnalyzer:
 
         assert len(findings) == 1
         assert findings[0].severity == Severity.PASS
-

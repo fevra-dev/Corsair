@@ -43,18 +43,20 @@ class ReferrerPolicyAnalyzer(BaseAnalyzer):
 
         if not value:
             logger.info(f"[Referrer-Policy] Missing: {self.url}")
-            findings.append(self.create_finding(
-                severity=Severity.LOW,
-                title="Referrer-Policy Missing",
-                description=(
-                    "The Referrer-Policy header is not set. "
-                    "Browsers will use the default policy (typically 'strict-origin-when-cross-origin' "
-                    "in modern browsers), but explicitly setting this header ensures consistent behavior."
-                ),
-                recommendation="Add Referrer-Policy header.",
-                example_value="strict-origin-when-cross-origin",
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=Severity.LOW,
+                    title="Referrer-Policy Missing",
+                    description=(
+                        "The Referrer-Policy header is not set. "
+                        "Browsers will use the default policy (typically 'strict-origin-when-cross-origin' "
+                        "in modern browsers), but explicitly setting this header ensures consistent behavior."
+                    ),
+                    recommendation="Add Referrer-Policy header.",
+                    example_value="strict-origin-when-cross-origin",
+                    reference_url=self.MDN_URL,
+                )
+            )
             return findings
 
         logger.info(f"[Referrer-Policy] Value: {value}")
@@ -65,35 +67,38 @@ class ReferrerPolicyAnalyzer(BaseAnalyzer):
         # Check for unsafe values
         for v in values:
             if v == "unsafe-url":
-                findings.append(self.create_finding(
-                    severity=Severity.MEDIUM,
-                    title="Referrer-Policy Uses unsafe-url",
-                    description=(
-                        "The policy 'unsafe-url' sends the full URL (including path and query string) "
-                        "as the referrer. This can leak sensitive information in URLs to third parties."
-                    ),
-                    current_value=value,
-                    recommendation="Use 'strict-origin-when-cross-origin' or more restrictive.",
-                    example_value="strict-origin-when-cross-origin",
-                    reference_url=self.MDN_URL
-                ))
+                findings.append(
+                    self.create_finding(
+                        severity=Severity.MEDIUM,
+                        title="Referrer-Policy Uses unsafe-url",
+                        description=(
+                            "The policy 'unsafe-url' sends the full URL (including path and query string) "
+                            "as the referrer. This can leak sensitive information in URLs to third parties."
+                        ),
+                        current_value=value,
+                        recommendation="Use 'strict-origin-when-cross-origin' or more restrictive.",
+                        example_value="strict-origin-when-cross-origin",
+                        reference_url=self.MDN_URL,
+                    )
+                )
             elif v == "origin-when-cross-origin":
-                findings.append(self.create_finding(
-                    severity=Severity.LOW,
-                    title="Referrer-Policy Could Be More Restrictive",
-                    description=(
-                        "The policy 'origin-when-cross-origin' sends the origin for cross-origin requests. "
-                        "Consider 'strict-origin-when-cross-origin' which also requires HTTPS."
-                    ),
-                    current_value=value,
-                    recommendation="Consider using 'strict-origin-when-cross-origin'.",
-                    example_value="strict-origin-when-cross-origin",
-                    reference_url=self.MDN_URL
-                ))
+                findings.append(
+                    self.create_finding(
+                        severity=Severity.LOW,
+                        title="Referrer-Policy Could Be More Restrictive",
+                        description=(
+                            "The policy 'origin-when-cross-origin' sends the origin for cross-origin requests. "
+                            "Consider 'strict-origin-when-cross-origin' which also requires HTTPS."
+                        ),
+                        current_value=value,
+                        recommendation="Consider using 'strict-origin-when-cross-origin'.",
+                        example_value="strict-origin-when-cross-origin",
+                        reference_url=self.MDN_URL,
+                    )
+                )
 
         # If no issues found
         if not findings:
             findings.append(self.create_pass_finding(value))
 
         return findings
-

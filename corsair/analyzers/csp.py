@@ -63,14 +63,16 @@ class CSPAnalyzer(BaseAnalyzer):
                     "but this does not enforce the policy."
                 )
 
-            findings.append(self.create_finding(
-                severity=severity,
-                title="Content-Security-Policy Missing",
-                description=description,
-                recommendation="Add a Content-Security-Policy header to protect against XSS.",
-                example_value="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'",
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=severity,
+                    title="Content-Security-Policy Missing",
+                    description=description,
+                    recommendation="Add a Content-Security-Policy header to protect against XSS.",
+                    example_value="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'",
+                    reference_url=self.MDN_URL,
+                )
+            )
             return findings
 
         logger.info(f"[CSP] Analyzing policy: {csp_value[:100]}...")
@@ -92,30 +94,34 @@ class CSPAnalyzer(BaseAnalyzer):
 
                     logger.warning(f"[CSP] {title}: {dangerous_source}")
 
-                    findings.append(self.create_finding(
-                        severity=severity,
-                        title=title,
-                        description=f"The directive '{directive}' contains '{dangerous_source}'. {reason}",
-                        current_value=csp_value,
-                        recommendation=f"Remove '{dangerous_source}' from {directive} if possible.",
-                        example_value=f"{directive} 'self'",
-                        reference_url=self.MDN_URL
-                    ))
+                    findings.append(
+                        self.create_finding(
+                            severity=severity,
+                            title=title,
+                            description=f"The directive '{directive}' contains '{dangerous_source}'. {reason}",
+                            current_value=csp_value,
+                            recommendation=f"Remove '{dangerous_source}' from {directive} if possible.",
+                            example_value=f"{directive} 'self'",
+                            reference_url=self.MDN_URL,
+                        )
+                    )
 
         # Check if default-src is missing (policy should have a fallback)
         if "default-src" not in directives:
-            findings.append(self.create_finding(
-                severity=Severity.LOW,
-                title="CSP missing default-src",
-                description=(
-                    "The CSP does not include a default-src directive. "
-                    "This means any fetch directives not explicitly set will have no restrictions."
-                ),
-                current_value=csp_value,
-                recommendation="Add a default-src directive as a fallback.",
-                example_value="default-src 'self'",
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=Severity.LOW,
+                    title="CSP missing default-src",
+                    description=(
+                        "The CSP does not include a default-src directive. "
+                        "This means any fetch directives not explicitly set will have no restrictions."
+                    ),
+                    current_value=csp_value,
+                    recommendation="Add a default-src directive as a fallback.",
+                    example_value="default-src 'self'",
+                    reference_url=self.MDN_URL,
+                )
+            )
 
         # If no issues found, mark as PASS
         if not findings:
@@ -145,4 +151,3 @@ class CSPAnalyzer(BaseAnalyzer):
             directives[directive] = sources
 
         return directives
-

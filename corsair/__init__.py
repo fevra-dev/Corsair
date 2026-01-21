@@ -13,7 +13,7 @@ A next-generation security header analysis platform with:
 Usage:
     # CLI
     corsair scan https://example.com
-    
+
     # Python API
     from corsair import HeadScanner
     scanner = HeadScanner()
@@ -53,10 +53,8 @@ __all__ = [
     "__app_name__",
     "__description__",
     "__url__",
-    
     # Core classes
     "HeadScanner",
-    
     # Data models
     "Severity",
     "HeaderCategory",

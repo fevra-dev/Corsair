@@ -22,4 +22,3 @@ def bad_headers():
         "X-Powered-By": "PHP/7.4.0",
         "Server": "Apache/2.4.41 (Ubuntu)",
     }
-

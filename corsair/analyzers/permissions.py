@@ -44,33 +44,37 @@ class PermissionsPolicyAnalyzer(BaseAnalyzer):
         if not value:
             if feature_policy:
                 # Old header present
-                findings.append(self.create_finding(
-                    severity=Severity.LOW,
-                    title="Using Deprecated Feature-Policy",
-                    description=(
-                        "The site uses the deprecated Feature-Policy header. "
-                        "Modern browsers support Permissions-Policy instead."
-                    ),
-                    current_value=feature_policy,
-                    recommendation="Migrate to Permissions-Policy header.",
-                    example_value='geolocation=(), microphone=(), camera=()',
-                    reference_url=self.MDN_URL
-                ))
+                findings.append(
+                    self.create_finding(
+                        severity=Severity.LOW,
+                        title="Using Deprecated Feature-Policy",
+                        description=(
+                            "The site uses the deprecated Feature-Policy header. "
+                            "Modern browsers support Permissions-Policy instead."
+                        ),
+                        current_value=feature_policy,
+                        recommendation="Migrate to Permissions-Policy header.",
+                        example_value="geolocation=(), microphone=(), camera=()",
+                        reference_url=self.MDN_URL,
+                    )
+                )
             else:
                 logger.info(f"[Permissions-Policy] Missing: {self.url}")
-                findings.append(self.create_finding(
-                    severity=Severity.LOW,
-                    title="Permissions-Policy Missing",
-                    description=(
-                        "The Permissions-Policy header is not set. "
-                        "This header allows you to control which browser features "
-                        "can be used by the page and embedded content. "
-                        "Without it, all features may be available to embedded iframes."
-                    ),
-                    recommendation="Add Permissions-Policy to restrict sensitive features.",
-                    example_value='geolocation=(), microphone=(), camera=(), payment=()',
-                    reference_url=self.MDN_URL
-                ))
+                findings.append(
+                    self.create_finding(
+                        severity=Severity.LOW,
+                        title="Permissions-Policy Missing",
+                        description=(
+                            "The Permissions-Policy header is not set. "
+                            "This header allows you to control which browser features "
+                            "can be used by the page and embedded content. "
+                            "Without it, all features may be available to embedded iframes."
+                        ),
+                        recommendation="Add Permissions-Policy to restrict sensitive features.",
+                        example_value="geolocation=(), microphone=(), camera=(), payment=()",
+                        reference_url=self.MDN_URL,
+                    )
+                )
             return findings
 
         logger.info(f"[Permissions-Policy] Value: {value}")
@@ -85,21 +89,22 @@ class PermissionsPolicyAnalyzer(BaseAnalyzer):
                 unrestricted.append(feature)
 
         if unrestricted:
-            findings.append(self.create_finding(
-                severity=Severity.MEDIUM,
-                title="Sensitive Features Unrestricted",
-                description=(
-                    f"The following sensitive features are allowed for all origins: "
-                    f"{', '.join(unrestricted)}. "
-                    "Consider restricting these to 'self' or specific origins."
-                ),
-                current_value=value,
-                recommendation="Restrict sensitive features to specific origins.",
-                example_value='geolocation=(self), camera=(self)',
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=Severity.MEDIUM,
+                    title="Sensitive Features Unrestricted",
+                    description=(
+                        f"The following sensitive features are allowed for all origins: "
+                        f"{', '.join(unrestricted)}. "
+                        "Consider restricting these to 'self' or specific origins."
+                    ),
+                    current_value=value,
+                    recommendation="Restrict sensitive features to specific origins.",
+                    example_value="geolocation=(self), camera=(self)",
+                    reference_url=self.MDN_URL,
+                )
+            )
         else:
             findings.append(self.create_pass_finding(value))
 
         return findings
-

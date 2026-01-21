@@ -15,7 +15,7 @@ def make_finding(severity: Severity) -> Finding:
         current_value=None,
         recommendation="Test",
         example_value="Test",
-        reference_url=""
+        reference_url="",
     )
 
 
@@ -30,8 +30,8 @@ class TestScoring:
     def test_multiple_findings_stack(self):
         findings = [
             make_finding(Severity.CRITICAL),  # -25
-            make_finding(Severity.HIGH),      # -15
-            make_finding(Severity.MEDIUM),    # -10
+            make_finding(Severity.HIGH),  # -15
+            make_finding(Severity.MEDIUM),  # -10
         ]
         assert calculate_score(findings) == 50
 
@@ -56,4 +56,3 @@ class TestGrading:
     def test_grade_f(self):
         assert calculate_grade(45) == "F"
         assert calculate_grade(0) == "F"
-

@@ -6,7 +6,7 @@ Enables autonomous security scanning from Claude, GPT, and other AI agents.
 
 Run with:
     corsair mcp-server
-    
+
 Or programmatically:
     from corsair.mcp.server import mcp
     mcp.run()
@@ -28,6 +28,7 @@ logger = get_logger(__name__)
 # Try to import FastMCP
 try:
     from fastmcp import FastMCP
+
     FASTMCP_AVAILABLE = True
 except ImportError:
     FASTMCP_AVAILABLE = False
@@ -41,20 +42,18 @@ if FASTMCP_AVAILABLE:
         description=(
             "⚓ HTTP security header scanner with CVE correlation and AI remediation. "
             "Analyzes 60+ security headers and provides framework-specific fixes."
-        )
+        ),
     )
 else:
     mcp = None
 
 
 def _scan_headers_impl(
-    url: str,
-    save_history: bool = False,
-    framework: str = "generic"
+    url: str, save_history: bool = False, framework: str = "generic"
 ) -> Dict[str, Any]:
     """
     Implementation of scan_headers tool.
-    
+
     Separate from decorator for testability.
     """
     from ..scanner import HeadScanner
@@ -62,35 +61,32 @@ def _scan_headers_impl(
     from ..intelligence.cve_correlator import CVECorrelator
     from ..compliance.frameworks import ComplianceMapper
     from ..history.database import HistoryDatabase
-    
+
     logger.info(f"[MCP] scan_headers called for {url}")
-    
+
     # Initialize components
     scanner = HeadScanner()
     fingerprint_engine = FingerprintEngine()
     cve_correlator = CVECorrelator()
     compliance_mapper = ComplianceMapper()
-    
+
     # Run scan
     result = scanner.scan_target(url)
-    
+
     if result.error:
-        return {
-            "error": result.error,
-            "url": url
-        }
-    
+        return {"error": result.error, "url": url}
+
     # Run fingerprinting
     fingerprints = fingerprint_engine.detect(result.headers)
     result.fingerprints = fingerprints
-    
+
     # Enrich with CVE data
     cve_correlator.initialize_sync()
     result.findings = cve_correlator.enrich_all_findings_sync(result.findings)
-    
+
     # Map compliance
     result.findings = compliance_mapper.map_all_findings(result.findings)
-    
+
     # Save to history if requested
     if save_history:
         try:
@@ -99,10 +95,10 @@ def _scan_headers_impl(
             logger.info(f"[MCP] Saved scan {scan_id} to history")
         except Exception as e:
             logger.warning(f"[MCP] Failed to save history: {e}")
-    
+
     # Generate remediation suggestions
     remediation = _generate_remediation_impl(result.findings, framework)
-    
+
     # Build response
     response = {
         "url": result.url,
@@ -119,7 +115,7 @@ def _scan_headers_impl(
             "low": result.low_count,
             "pass": result.pass_count,
             "cve_count": result.cve_count,
-            "kev_count": result.kev_count
+            "kev_count": result.kev_count,
         },
         "findings": [
             {
@@ -129,7 +125,7 @@ def _scan_headers_impl(
                 "description": f.description,
                 "recommendation": f.recommendation,
                 "cve_ids": [c.cve_id for c in f.cve_correlations],
-                "in_cisa_kev": any(c.in_cisa_kev for c in f.cve_correlations)
+                "in_cisa_kev": any(c.in_cisa_kev for c in f.cve_correlations),
             }
             for f in result.findings
             if f.severity.value not in ["PASS", "INFO"]
@@ -138,21 +134,18 @@ def _scan_headers_impl(
             {"name": fp.name, "version": fp.version, "category": fp.category}
             for fp in result.fingerprints[:5]  # Limit to top 5
         ],
-        "remediation": remediation
+        "remediation": remediation,
     }
-    
+
     logger.info(f"[MCP] Scan complete: {result.score}/100 ({result.grade})")
-    
+
     return response
 
 
-def _generate_remediation_impl(
-    findings: List,
-    framework: str
-) -> Dict[str, Dict]:
+def _generate_remediation_impl(findings: List, framework: str) -> Dict[str, Dict]:
     """Generate remediation code for findings."""
     remediation = {}
-    
+
     # Framework-specific templates
     templates = {
         "nextjs": {
@@ -195,7 +188,7 @@ module.exports = {
     }];
   }
 };
-"""
+""",
         },
         "express": {
             "Content-Security-Policy": """
@@ -221,7 +214,7 @@ app.use(helmet.hsts({
   includeSubDomains: true,
   preload: true
 }));
-"""
+""",
         },
         "generic": {
             "Content-Security-Policy": """
@@ -230,12 +223,12 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'strict-dynamic';
 """,
             "Strict-Transport-Security": """
 Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-"""
-        }
+""",
+        },
     }
-    
+
     framework_templates = templates.get(framework, templates["generic"])
-    
+
     for finding in findings:
         if finding.severity.value in ["CRITICAL", "HIGH", "MEDIUM"]:
             header = finding.header
@@ -243,20 +236,18 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
                 remediation[header] = {
                     "code": framework_templates[header],
                     "framework": framework,
-                    "explanation": f"Fix for {finding.title}"
+                    "explanation": f"Fix for {finding.title}",
                 }
-    
+
     return remediation
 
 
 def _generate_csp_impl(
-    requirements: str,
-    framework: str = "generic",
-    strict: bool = True
+    requirements: str, framework: str = "generic", strict: bool = True
 ) -> Dict[str, Any]:
     """Implementation of generate_csp tool."""
     logger.info(f"[MCP] generate_csp called: {requirements[:50]}...")
-    
+
     # Build CSP based on requirements
     if strict:
         csp = (
@@ -279,7 +270,7 @@ def _generate_csp_impl(
             "img-src 'self' data: https:; "
             "object-src 'none'"
         )
-    
+
     # Framework-specific implementation
     implementations = {
         "nextjs": """
@@ -308,12 +299,12 @@ app.use((req, res, next) => {
   next();
 });
 """,
-        "generic": "Content-Security-Policy: %CSP%"
+        "generic": "Content-Security-Policy: %CSP%",
     }
-    
+
     impl_template = implementations.get(framework, implementations["generic"])
     implementation = impl_template.replace("%CSP%", csp)
-    
+
     return {
         "csp_header": csp,
         "framework": framework,
@@ -322,64 +313,56 @@ app.use((req, res, next) => {
         "explanation": (
             f"Generated {'strict' if strict else 'basic'} CSP for {framework}. "
             + ("Uses nonces and strict-dynamic for modern browsers." if strict else "")
-        )
+        ),
     }
 
 
 # Register MCP tools if available
 if FASTMCP_AVAILABLE and mcp:
-    
+
     @mcp.tool()
-    def scan_headers(
-        url: str,
-        save_history: bool = False,
-        framework: str = "generic"
-    ) -> Dict:
+    def scan_headers(url: str, save_history: bool = False, framework: str = "generic") -> Dict:
         """
         Scan HTTP security headers for a given URL.
-        
+
         Analyzes 60+ security headers and returns:
         - Security score (0-100) and grade (A-F)
         - Detailed findings with severity levels
         - CVE correlations for misconfigurations
         - CISA KEV (Known Exploited Vulnerabilities) correlation
         - Framework-specific remediation suggestions
-        
+
         Args:
             url: The URL to scan (e.g., "https://example.com")
             save_history: Save results to history database for trend tracking
             framework: Target framework for remediation code (nextjs, express, generic)
-        
+
         Returns:
             Complete scan result with findings and recommendations
-        
+
         Example:
             result = scan_headers("https://google.com", framework="nextjs")
             print(f"Score: {result['score']}/100 ({result['grade']})")
         """
         return _scan_headers_impl(url, save_history, framework)
-    
+
     @mcp.tool()
-    def generate_csp(
-        requirements: str,
-        framework: str = "generic",
-        strict: bool = True
-    ) -> Dict:
+    def generate_csp(requirements: str, framework: str = "generic", strict: bool = True) -> Dict:
         """
         Generate a Content-Security-Policy based on requirements.
-        
+
         Creates a secure CSP that meets your application's needs
         while following security best practices.
-        
+
         Args:
             requirements: Natural language description of what your app needs
                          (e.g., "React SPA with Google Analytics and Stripe")
             framework: Target framework (nextjs, express, generic)
             strict: Use strict-dynamic and nonces (recommended for modern apps)
-        
+
         Returns:
             Generated CSP header and implementation code
-        
+
         Example:
             result = generate_csp(
                 "React app with YouTube embeds",
@@ -388,45 +371,45 @@ if FASTMCP_AVAILABLE and mcp:
             )
         """
         return _generate_csp_impl(requirements, framework, strict)
-    
+
     @mcp.tool()
     def compare_with_history(url: str, days: int = 30) -> Dict:
         """
         Compare current scan with historical data.
-        
+
         Detects configuration drift and security regressions.
-        
+
         Args:
             url: URL to scan and compare
             days: Number of days of history to compare against
-        
+
         Returns:
             Current scan result with historical comparison
         """
         from ..history.database import HistoryDatabase
-        
+
         logger.info(f"[MCP] compare_with_history for {url}")
-        
+
         # Run current scan
         current = _scan_headers_impl(url, save_history=True, framework="generic")
-        
+
         if "error" in current:
             return current
-        
+
         # Get historical data
         db = HistoryDatabase()
         history = db.get_history(url, limit=10)
-        
+
         if not history:
             return {
                 "current": current,
                 "comparison": None,
-                "message": "No historical data available for comparison"
+                "message": "No historical data available for comparison",
             }
-        
+
         # Compare with most recent
         previous = history[0]
-        
+
         return {
             "current": current,
             "comparison": {
@@ -434,36 +417,32 @@ if FASTMCP_AVAILABLE and mcp:
                 "previous_score": previous["score"],
                 "score_delta": current["score"] - previous["score"],
                 "trend": (
-                    "improving" if current["score"] > previous["score"]
-                    else "declining" if current["score"] < previous["score"]
-                    else "stable"
-                )
+                    "improving"
+                    if current["score"] > previous["score"]
+                    else "declining" if current["score"] < previous["score"] else "stable"
+                ),
             },
-            "history_count": len(history)
+            "history_count": len(history),
         }
-    
+
     @mcp.tool()
-    def get_remediation(
-        header_name: str,
-        issue_type: str,
-        framework: str = "generic"
-    ) -> Dict:
+    def get_remediation(header_name: str, issue_type: str, framework: str = "generic") -> Dict:
         """
         Get AI-generated remediation code for a specific header issue.
-        
+
         Args:
             header_name: The header with the issue (e.g., "Content-Security-Policy")
             issue_type: Type of issue (e.g., "missing", "unsafe-inline")
             framework: Target framework for code generation
-        
+
         Returns:
             Remediation code and explanation
         """
         logger.info(f"[MCP] get_remediation: {header_name} - {issue_type}")
-        
+
         # Build mock finding to get remediation
         from ..models import Finding, Severity, HeaderCategory
-        
+
         mock_finding = Finding(
             header=header_name,
             category=HeaderCategory.CONTENT,
@@ -473,16 +452,19 @@ if FASTMCP_AVAILABLE and mcp:
             current_value=None,
             recommendation="",
             example_value="",
-            reference_url=""
+            reference_url="",
         )
-        
+
         remediation = _generate_remediation_impl([mock_finding], framework)
-        
-        return remediation.get(header_name, {
-            "code": f"// No specific remediation template for {header_name}",
-            "framework": framework,
-            "explanation": f"Add {header_name} header per documentation"
-        })
+
+        return remediation.get(
+            header_name,
+            {
+                "code": f"// No specific remediation template for {header_name}",
+                "framework": framework,
+                "explanation": f"Add {header_name} header per documentation",
+            },
+        )
 
 
 def run_server():
@@ -491,7 +473,7 @@ def run_server():
         logger.error("[MCP] Cannot run server: fastmcp not installed")
         print("Error: fastmcp not installed. Run: pip install fastmcp")
         return
-    
+
     logger.info("[MCP] Starting Corsair MCP server...")
     mcp.run()
 

@@ -13,12 +13,13 @@ __all__ = ["get_mcp_server"]
 def get_mcp_server():
     """
     Get the MCP server instance.
-    
+
     Returns:
         FastMCP server instance
-        
+
     Raises:
         ImportError: If fastmcp is not installed
     """
     from .server import mcp
+
     return mcp

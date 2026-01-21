@@ -16,4 +16,3 @@ class BaseReporter(ABC):
     def generate(self, report: ScanReport) -> str:
         """Generate output string from scan report."""
         pass
-

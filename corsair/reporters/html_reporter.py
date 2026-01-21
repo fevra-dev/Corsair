@@ -126,12 +126,8 @@ class HTMLReporter(BaseReporter):
 
         # Calculate total findings
         total_findings = sum(
-            len([f for f in r.findings if f.severity.value not in ('PASS', 'INFO')])
+            len([f for f in r.findings if f.severity.value not in ("PASS", "INFO")])
             for r in report.results
         )
 
-        return template.render(
-            report=report,
-            total_findings=total_findings
-        )
-
+        return template.render(report=report, total_findings=total_findings)

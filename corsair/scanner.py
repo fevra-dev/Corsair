@@ -24,7 +24,7 @@ class HeadScanner:
         timeout: int = 10,
         follow_redirects: bool = True,
         max_redirects: int = 5,
-        user_agent: str = "HeadScan/1.0 (Security Header Analyzer)"
+        user_agent: str = "HeadScan/1.0 (Security Header Analyzer)",
     ):
         """
         Initialize scanner.
@@ -41,8 +41,7 @@ class HeadScanner:
         self.user_agent = user_agent
 
         logger.info(
-            f"Scanner initialized: timeout={timeout}s, "
-            f"follow_redirects={follow_redirects}"
+            f"Scanner initialized: timeout={timeout}s, " f"follow_redirects={follow_redirects}"
         )
 
     def _fetch_headers(self, url: str) -> Tuple[int, Dict[str, str], str, Optional[str]]:
@@ -52,17 +51,14 @@ class HeadScanner:
         Returns:
             Tuple of (status_code, headers_dict, final_url, error_or_none)
         """
-        headers = {
-            "User-Agent": self.user_agent,
-            "Accept": "*/*"
-        }
+        headers = {"User-Agent": self.user_agent, "Accept": "*/*"}
 
         try:
             with httpx.Client(
                 timeout=self.timeout,
                 follow_redirects=self.follow_redirects,
                 max_redirects=self.max_redirects,
-                verify=True
+                verify=True,
             ) as client:
                 # Try HEAD first
                 try:
@@ -71,12 +67,7 @@ class HeadScanner:
                     # Fallback to GET
                     response = client.get(url, headers=headers)
 
-                return (
-                    response.status_code,
-                    dict(response.headers),
-                    str(response.url),
-                    None
-                )
+                return (response.status_code, dict(response.headers), str(response.url), None)
 
         except httpx.TimeoutException:
             return (0, {}, url, "Request timeout")
@@ -87,11 +78,7 @@ class HeadScanner:
         except Exception as e:
             return (0, {}, url, f"Error: {e}")
 
-    def _analyze_headers(
-        self,
-        headers: Dict[str, str],
-        url: str
-    ) -> List[Finding]:
+    def _analyze_headers(self, headers: Dict[str, str], url: str) -> List[Finding]:
         """Run all analyzers on headers."""
         findings = []
 
@@ -150,7 +137,7 @@ class HeadScanner:
                 score=0,
                 grade="F",
                 scan_time_ms=duration,
-                error=error
+                error=error,
             )
 
         logger.info(f"Got response: {status_code} from {final_url}")
@@ -178,7 +165,7 @@ class HeadScanner:
             findings=findings,
             score=score,
             grade=grade,
-            scan_time_ms=duration
+            scan_time_ms=duration,
         )
 
     def scan(self, targets: List[str]) -> ScanReport:
@@ -221,13 +208,9 @@ class HeadScanner:
             scan_start=start_time.isoformat(),
             scan_end=end_time.isoformat(),
             scan_duration_ms=duration,
-            results=results
+            results=results,
         )
 
-        logger.info(
-            f"Scan complete: {len(targets)} targets, "
-            f"average score: {avg_score:.1f}"
-        )
+        logger.info(f"Scan complete: {len(targets)} targets, " f"average score: {avg_score:.1f}")
 
         return report
-

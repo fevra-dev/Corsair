@@ -67,10 +67,15 @@ class ConsoleReporter(BaseReporter):
 
         # Score with color
         score_color = "green" if result.score >= 80 else "yellow" if result.score >= 50 else "red"
-        score_str = click.style(
-            f"Security Score: {result.score}/100 (Grade: {result.grade})",
-            fg=score_color, bold=True
-        ) if not self.no_color else f"Security Score: {result.score}/100 (Grade: {result.grade})"
+        score_str = (
+            click.style(
+                f"Security Score: {result.score}/100 (Grade: {result.grade})",
+                fg=score_color,
+                bold=True,
+            )
+            if not self.no_color
+            else f"Security Score: {result.score}/100 (Grade: {result.grade})"
+        )
 
         lines.append("═" * 64)
         lines.append(score_str)
@@ -124,4 +129,3 @@ class ConsoleReporter(BaseReporter):
                 lines.append(f"  Reference: {finding.reference_url}")
 
         return lines
-

@@ -74,18 +74,20 @@ class CookieAnalyzer(BaseAnalyzer):
 
         # Missing Secure on HTTPS site
         if is_https and not has_secure:
-            findings.append(self.create_finding(
-                severity=Severity.HIGH,
-                title=f"Cookie '{cookie_name}' Missing Secure Flag",
-                description=(
-                    "The Secure flag is not set. The cookie can be transmitted "
-                    "over unencrypted HTTP, potentially exposing session data."
-                ),
-                current_value=cookie,
-                recommendation="Add the Secure flag to all cookies on HTTPS sites.",
-                example_value=f"{cookie_name}=value; Secure; HttpOnly; SameSite=Strict",
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=Severity.HIGH,
+                    title=f"Cookie '{cookie_name}' Missing Secure Flag",
+                    description=(
+                        "The Secure flag is not set. The cookie can be transmitted "
+                        "over unencrypted HTTP, potentially exposing session data."
+                    ),
+                    current_value=cookie,
+                    recommendation="Add the Secure flag to all cookies on HTTPS sites.",
+                    example_value=f"{cookie_name}=value; Secure; HttpOnly; SameSite=Strict",
+                    reference_url=self.MDN_URL,
+                )
+            )
 
         # Missing HttpOnly
         if not has_httponly:
@@ -94,60 +96,67 @@ class CookieAnalyzer(BaseAnalyzer):
             is_sensitive = any(s in cookie_name.lower() for s in sensitive_names)
 
             if is_sensitive:
-                findings.append(self.create_finding(
-                    severity=Severity.HIGH,
-                    title=f"Cookie '{cookie_name}' Missing HttpOnly Flag",
-                    description=(
-                        "The HttpOnly flag is not set on what appears to be a "
-                        "sensitive cookie. JavaScript can access this cookie, "
-                        "making it vulnerable to XSS attacks."
-                    ),
-                    current_value=cookie,
-                    recommendation="Add HttpOnly flag to prevent JavaScript access.",
-                    example_value=f"{cookie_name}=value; Secure; HttpOnly; SameSite=Strict",
-                    reference_url=self.MDN_URL
-                ))
+                findings.append(
+                    self.create_finding(
+                        severity=Severity.HIGH,
+                        title=f"Cookie '{cookie_name}' Missing HttpOnly Flag",
+                        description=(
+                            "The HttpOnly flag is not set on what appears to be a "
+                            "sensitive cookie. JavaScript can access this cookie, "
+                            "making it vulnerable to XSS attacks."
+                        ),
+                        current_value=cookie,
+                        recommendation="Add HttpOnly flag to prevent JavaScript access.",
+                        example_value=f"{cookie_name}=value; Secure; HttpOnly; SameSite=Strict",
+                        reference_url=self.MDN_URL,
+                    )
+                )
             else:
-                findings.append(self.create_finding(
-                    severity=Severity.MEDIUM,
-                    title=f"Cookie '{cookie_name}' Missing HttpOnly Flag",
-                    description=(
-                        "The HttpOnly flag is not set. JavaScript can access this cookie."
-                    ),
-                    current_value=cookie,
-                    recommendation="Consider adding HttpOnly if not needed by JavaScript.",
-                    example_value=f"{cookie_name}=value; Secure; HttpOnly",
-                    reference_url=self.MDN_URL
-                ))
+                findings.append(
+                    self.create_finding(
+                        severity=Severity.MEDIUM,
+                        title=f"Cookie '{cookie_name}' Missing HttpOnly Flag",
+                        description=(
+                            "The HttpOnly flag is not set. JavaScript can access this cookie."
+                        ),
+                        current_value=cookie,
+                        recommendation="Consider adding HttpOnly if not needed by JavaScript.",
+                        example_value=f"{cookie_name}=value; Secure; HttpOnly",
+                        reference_url=self.MDN_URL,
+                    )
+                )
 
         # Missing or weak SameSite
         if not has_samesite:
-            findings.append(self.create_finding(
-                severity=Severity.MEDIUM,
-                title=f"Cookie '{cookie_name}' Missing SameSite Attribute",
-                description=(
-                    "The SameSite attribute is not set. Modern browsers default to 'Lax', "
-                    "but explicitly setting it ensures consistent behavior and provides "
-                    "CSRF protection."
-                ),
-                current_value=cookie,
-                recommendation="Add SameSite=Strict or SameSite=Lax.",
-                example_value=f"{cookie_name}=value; SameSite=Strict",
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=Severity.MEDIUM,
+                    title=f"Cookie '{cookie_name}' Missing SameSite Attribute",
+                    description=(
+                        "The SameSite attribute is not set. Modern browsers default to 'Lax', "
+                        "but explicitly setting it ensures consistent behavior and provides "
+                        "CSRF protection."
+                    ),
+                    current_value=cookie,
+                    recommendation="Add SameSite=Strict or SameSite=Lax.",
+                    example_value=f"{cookie_name}=value; SameSite=Strict",
+                    reference_url=self.MDN_URL,
+                )
+            )
         elif samesite_value == "none" and not has_secure:
-            findings.append(self.create_finding(
-                severity=Severity.HIGH,
-                title=f"Cookie '{cookie_name}' SameSite=None Without Secure",
-                description=(
-                    "SameSite=None requires the Secure flag. "
-                    "Without it, modern browsers will reject the cookie."
-                ),
-                current_value=cookie,
-                recommendation="Add Secure flag when using SameSite=None.",
-                example_value=f"{cookie_name}=value; Secure; SameSite=None",
-                reference_url=self.MDN_URL
-            ))
+            findings.append(
+                self.create_finding(
+                    severity=Severity.HIGH,
+                    title=f"Cookie '{cookie_name}' SameSite=None Without Secure",
+                    description=(
+                        "SameSite=None requires the Secure flag. "
+                        "Without it, modern browsers will reject the cookie."
+                    ),
+                    current_value=cookie,
+                    recommendation="Add Secure flag when using SameSite=None.",
+                    example_value=f"{cookie_name}=value; Secure; SameSite=None",
+                    reference_url=self.MDN_URL,
+                )
+            )
 
         return findings
-

@@ -25,13 +25,13 @@ class BaseAnalyzer(ABC):
     # Subclasses must define these class variables
     HEADER_NAME: ClassVar[str] = ""
     CATEGORY: ClassVar[HeaderCategory] = HeaderCategory.CONTENT
-    
+
     # Optional: Additional headers this analyzer checks
     ADDITIONAL_HEADERS: ClassVar[List[str]] = []
-    
+
     # Optional: CVE mappings for common misconfigurations
     CVE_MAPPINGS: ClassVar[Dict[str, List[str]]] = {}
-    
+
     # Optional: Compliance framework mappings
     COMPLIANCE_MAPPINGS: ClassVar[Dict[str, Dict[str, str]]] = {}
 
@@ -76,11 +76,11 @@ class BaseAnalyzer(ABC):
         reference_url: str,
         current_value: Optional[str] = None,
         cve_ids: Optional[List[str]] = None,
-        compliance_ids: Optional[Dict[str, str]] = None
+        compliance_ids: Optional[Dict[str, str]] = None,
     ) -> Finding:
         """
         Helper to create a Finding object with CVE and compliance mappings.
-        
+
         Args:
             severity: Finding severity level
             title: Short descriptive title
@@ -96,24 +96,23 @@ class BaseAnalyzer(ABC):
         cve_correlations = []
         if cve_ids:
             for cve_id in cve_ids:
-                cve_correlations.append(CVECorrelation(
-                    cve_id=cve_id,
-                    cvss_score=0.0,
-                    description="",
-                    in_cisa_kev=False
-                ))
-        
+                cve_correlations.append(
+                    CVECorrelation(cve_id=cve_id, cvss_score=0.0, description="", in_cisa_kev=False)
+                )
+
         # Build compliance mappings
         compliance_mappings = []
         if compliance_ids:
             for framework, req_id in compliance_ids.items():
-                compliance_mappings.append(ComplianceMapping(
-                    framework=framework,
-                    requirement_id=req_id,
-                    requirement_name="",
-                    status="FAIL"
-                ))
-        
+                compliance_mappings.append(
+                    ComplianceMapping(
+                        framework=framework,
+                        requirement_id=req_id,
+                        requirement_name="",
+                        status="FAIL",
+                    )
+                )
+
         return Finding(
             header=self.HEADER_NAME,
             category=self.CATEGORY,
@@ -125,7 +124,7 @@ class BaseAnalyzer(ABC):
             example_value=example_value,
             reference_url=reference_url,
             cve_correlations=cve_correlations,
-            compliance_mappings=compliance_mappings
+            compliance_mappings=compliance_mappings,
         )
 
     def create_pass_finding(self, current_value: str) -> Finding:
@@ -139,6 +138,5 @@ class BaseAnalyzer(ABC):
             current_value=current_value,
             recommendation="No action needed.",
             example_value=current_value,
-            reference_url=""
+            reference_url="",
         )
-

@@ -24,7 +24,6 @@ from typing import Dict, List, Any
 # }
 
 SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
-    
     # ==========================================================================
     # SERVER SIGNATURES
     # ==========================================================================
@@ -36,7 +35,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "Server", "regex": r"Apache$"},
                 {"header": "Server", "regex": r"Apache \("},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "nginx": {
             "patterns": [
@@ -45,14 +44,14 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "Server", "regex": r"nginx$"},
                 {"header": "Server", "regex": r"^nginx"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "openresty": {
             "patterns": [
                 {"header": "Server", "regex": r"openresty/(\d+\.\d+\.\d+)", "version_group": 1},
                 {"header": "Server", "regex": r"openresty"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "iis": {
             "patterns": [
@@ -60,83 +59,82 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "Server", "regex": r"Microsoft-IIS"},
                 {"header": "X-Powered-By", "regex": r"ASP\.NET"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "lighttpd": {
             "patterns": [
                 {"header": "Server", "regex": r"lighttpd/(\d+\.\d+\.\d+)", "version_group": 1},
                 {"header": "Server", "regex": r"lighttpd"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "litespeed": {
             "patterns": [
                 {"header": "Server", "regex": r"LiteSpeed"},
                 {"header": "X-LiteSpeed-Cache", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "caddy": {
             "patterns": [
                 {"header": "Server", "regex": r"Caddy"},
                 {"header": "Server", "regex": r"caddy"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "traefik": {
             "patterns": [
                 {"header": "Server", "regex": r"Traefik"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "haproxy": {
             "patterns": [
                 {"header": "Server", "regex": r"HAProxy"},
                 {"header": "Via", "regex": r"haproxy"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "gunicorn": {
             "patterns": [
                 {"header": "Server", "regex": r"gunicorn/(\d+\.\d+\.\d+)", "version_group": 1},
                 {"header": "Server", "regex": r"gunicorn"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "uvicorn": {
             "patterns": [
                 {"header": "Server", "regex": r"uvicorn"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "tomcat": {
             "patterns": [
                 {"header": "Server", "regex": r"Apache-Coyote/(\d+\.\d+)", "version_group": 1},
                 {"header": "Server", "regex": r"Apache Tomcat/(\d+\.\d+)", "version_group": 1},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "jetty": {
             "patterns": [
                 {"header": "Server", "regex": r"Jetty\((\d+\.\d+)", "version_group": 1},
                 {"header": "Server", "regex": r"Jetty"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "cowboy": {
             "patterns": [
                 {"header": "Server", "regex": r"Cowboy"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "kestrel": {
             "patterns": [
                 {"header": "Server", "regex": r"Kestrel"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
     },
-    
     # ==========================================================================
     # CDN SIGNATURES
     # ==========================================================================
@@ -148,7 +146,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "cf-request-id", "regex": r".+"},
                 {"header": "Server", "regex": r"cloudflare"},
             ],
-            "confidence_base": 0.98
+            "confidence_base": 0.98,
         },
         "aws_cloudfront": {
             "patterns": [
@@ -157,7 +155,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "Via", "regex": r"cloudfront"},
                 {"header": "X-Cache", "regex": r".*CloudFront"},
             ],
-            "confidence_base": 0.98
+            "confidence_base": 0.98,
         },
         "akamai": {
             "patterns": [
@@ -166,7 +164,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Akamai-Transformed", "regex": r".+"},
                 {"header": "Server", "regex": r"AkamaiGHost"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "fastly": {
             "patterns": [
@@ -175,42 +173,42 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "Fastly-Debug-Digest", "regex": r".+"},
                 {"header": "X-Fastly-Request-ID", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "azure_cdn": {
             "patterns": [
                 {"header": "X-Azure-Ref", "regex": r".+"},
                 {"header": "X-MSEdge-Ref", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "google_cloud_cdn": {
             "patterns": [
                 {"header": "Via", "regex": r"google"},
                 {"header": "X-GUploader-UploadID", "regex": r".+"},
             ],
-            "confidence_base": 0.8
+            "confidence_base": 0.8,
         },
         "keycdn": {
             "patterns": [
                 {"header": "X-Edge-Location", "regex": r".+"},
                 {"header": "Server", "regex": r"keycdn"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "stackpath": {
             "patterns": [
                 {"header": "X-HW", "regex": r".+"},
                 {"header": "Server", "regex": r"NetDNA"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "bunny_cdn": {
             "patterns": [
                 {"header": "Server", "regex": r"BunnyCDN"},
                 {"header": "CDN-PullZone", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "vercel": {
             "patterns": [
@@ -218,7 +216,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Vercel-Cache", "regex": r".+"},
                 {"header": "Server", "regex": r"Vercel"},
             ],
-            "confidence_base": 0.98
+            "confidence_base": 0.98,
         },
         "netlify": {
             "patterns": [
@@ -226,17 +224,16 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Nf-Request-Id", "regex": r".+"},
                 {"header": "Server", "regex": r"Netlify"},
             ],
-            "confidence_base": 0.98
+            "confidence_base": 0.98,
         },
         "render": {
             "patterns": [
                 {"header": "Server", "regex": r"Render"},
                 {"header": "X-Render-Origin-Server", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
     },
-    
     # ==========================================================================
     # WAF SIGNATURES
     # ==========================================================================
@@ -248,14 +245,14 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"status_code": 403, "header": "Server", "regex": r"cloudflare"},
                 {"status_code": 503, "header": "Server", "regex": r"cloudflare"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "aws_waf": {
             "patterns": [
                 {"header": "x-amzn-waf-action", "regex": r".+"},
                 {"status_code": 403, "header": "x-amzn-RequestId", "regex": r".+"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "imperva": {
             "patterns": [
@@ -264,7 +261,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"cookie": "incap_ses_", "regex": r".+"},
                 {"cookie": "visid_incap_", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "sucuri": {
             "patterns": [
@@ -272,44 +269,43 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Sucuri-Cache", "regex": r".+"},
                 {"header": "Server", "regex": r"Sucuri"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "f5_big_ip": {
             "patterns": [
                 {"cookie": "BIGipServer", "regex": r".+"},
                 {"header": "X-Cnection", "regex": r".+"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "barracuda": {
             "patterns": [
                 {"header": "Server", "regex": r"BarracudaWAF"},
                 {"cookie": "barra_counter_session", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "fortiweb": {
             "patterns": [
                 {"header": "Server", "regex": r"FortiWeb"},
                 {"cookie": "FORTIWAFSID", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "modsecurity": {
             "patterns": [
                 {"header": "Server", "regex": r"mod_security"},
                 {"header": "Server", "regex": r"NOYB"},  # Common ModSec config
             ],
-            "confidence_base": 0.7
+            "confidence_base": 0.7,
         },
         "wordfence": {
             "patterns": [
                 {"header": "X-Wordfence-Blocked", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
     },
-    
     # ==========================================================================
     # FRAMEWORK SIGNATURES
     # ==========================================================================
@@ -318,7 +314,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
             "patterns": [
                 {"header": "X-Powered-By", "regex": r"Express"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "php": {
             "patterns": [
@@ -326,7 +322,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Powered-By", "regex": r"PHP/(\d+\.\d+)", "version_group": 1},
                 {"header": "X-Powered-By", "regex": r"PHP"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "aspnet": {
             "patterns": [
@@ -334,7 +330,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-AspNet-Version", "regex": r"(\d+\.\d+\.\d+)", "version_group": 1},
                 {"header": "X-AspNetMvc-Version", "regex": r"(\d+\.\d+)", "version_group": 1},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "django": {
             "patterns": [
@@ -342,13 +338,13 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"cookie": "django_language", "regex": r".+"},
                 {"header": "X-Frame-Options", "regex": r"^DENY$"},  # Django default
             ],
-            "confidence_base": 0.6
+            "confidence_base": 0.6,
         },
         "flask": {
             "patterns": [
                 {"header": "Server", "regex": r"Werkzeug"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "rails": {
             "patterns": [
@@ -356,21 +352,21 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Request-Id", "regex": r"^[a-f0-9-]+$"},
                 {"cookie": "_session_id", "regex": r".+"},
             ],
-            "confidence_base": 0.7
+            "confidence_base": 0.7,
         },
         "laravel": {
             "patterns": [
                 {"cookie": "laravel_session", "regex": r".+"},
                 {"cookie": "XSRF-TOKEN", "regex": r".+"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "spring": {
             "patterns": [
                 {"header": "X-Application-Context", "regex": r".+"},
                 {"cookie": "JSESSIONID", "regex": r".+"},
             ],
-            "confidence_base": 0.7
+            "confidence_base": 0.7,
         },
         "nextjs": {
             "patterns": [
@@ -378,29 +374,28 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-NextJS-Cache", "regex": r".+"},
                 {"header": "x-nextjs-cache", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "nuxt": {
             "patterns": [
                 {"header": "X-Powered-By", "regex": r"Nuxt"},
                 {"header": "x-nuxt-multi-cache", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "angular": {
             "patterns": [
                 {"header": "X-Powered-By", "regex": r"Angular"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "svelte": {
             "patterns": [
                 {"header": "X-Sveltekit-Page", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
     },
-    
     # ==========================================================================
     # CMS SIGNATURES
     # ==========================================================================
@@ -412,7 +407,7 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-WP-Total", "regex": r".+"},
                 {"header": "X-WP-TotalPages", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "drupal": {
             "patterns": [
@@ -420,14 +415,14 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Drupal-Dynamic-Cache", "regex": r".+"},
                 {"header": "X-Generator", "regex": r"Drupal"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "joomla": {
             "patterns": [
                 {"header": "X-Content-Encoded-By", "regex": r"Joomla"},
                 {"cookie": "joomla_user_state", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "shopify": {
             "patterns": [
@@ -435,26 +430,26 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Shopify-Stage", "regex": r".+"},
                 {"header": "X-Sorting-Hat-PodId", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "wix": {
             "patterns": [
                 {"header": "X-Wix-Request-Id", "regex": r".+"},
                 {"header": "X-Seen-By", "regex": r".*wix.*"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "squarespace": {
             "patterns": [
                 {"header": "X-ServedBy", "regex": r"squarespace"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "ghost": {
             "patterns": [
                 {"header": "X-Ghost-Cache-Status", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "magento": {
             "patterns": [
@@ -462,10 +457,9 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Magento-Cache-Control", "regex": r".+"},
                 {"header": "X-Magento-Cache-Debug", "regex": r".+"},
             ],
-            "confidence_base": 0.8
+            "confidence_base": 0.8,
         },
     },
-    
     # ==========================================================================
     # LOAD BALANCER SIGNATURES
     # ==========================================================================
@@ -476,22 +470,21 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"cookie": "AWSELB", "regex": r".+"},
                 {"cookie": "AWSALB", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "azure_lb": {
             "patterns": [
                 {"header": "X-Azure-Ref", "regex": r".+"},
             ],
-            "confidence_base": 0.85
+            "confidence_base": 0.85,
         },
         "gcp_lb": {
             "patterns": [
                 {"header": "Via", "regex": r"google"},
             ],
-            "confidence_base": 0.7
+            "confidence_base": 0.7,
         },
     },
-    
     # ==========================================================================
     # CACHE SIGNATURES
     # ==========================================================================
@@ -502,14 +495,14 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "Via", "regex": r"varnish"},
                 {"header": "X-Varnish-Cache", "regex": r".+"},
             ],
-            "confidence_base": 0.95
+            "confidence_base": 0.95,
         },
         "nginx_cache": {
             "patterns": [
                 {"header": "X-Cache-Status", "regex": r".+"},
                 {"header": "X-Nginx-Cache-Status", "regex": r".+"},
             ],
-            "confidence_base": 0.8
+            "confidence_base": 0.8,
         },
         "squid": {
             "patterns": [
@@ -517,13 +510,13 @@ SIGNATURES: Dict[str, Dict[str, Dict[str, Any]]] = {
                 {"header": "X-Cache", "regex": r".*squid.*"},
                 {"header": "X-Squid-Error", "regex": r".+"},
             ],
-            "confidence_base": 0.9
+            "confidence_base": 0.9,
         },
         "redis": {
             "patterns": [
                 {"header": "X-Redis-Connected", "regex": r".+"},
             ],
-            "confidence_base": 0.7
+            "confidence_base": 0.7,
         },
     },
 }

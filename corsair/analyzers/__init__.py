@@ -32,7 +32,7 @@ from .csp_enhanced import EnhancedCSPAnalyzer
 from .cross_origin import (
     CrossOriginIsolationAnalyzer,
     OriginAgentClusterAnalyzer,
-    DocumentPolicyAnalyzer
+    DocumentPolicyAnalyzer,
 )
 
 # List of all analyzers to run
@@ -40,31 +40,23 @@ from .cross_origin import (
 ALL_ANALYZERS = [
     # Use enhanced CSP analyzer instead of basic
     EnhancedCSPAnalyzer,
-    
     # Transport security
     HSTSAnalyzer,
-    
     # Framing protection
     XFrameOptionsAnalyzer,
-    
     # Content type protection
     XContentTypeOptionsAnalyzer,
-    
     # Cross-origin isolation (critical for 2026)
     CrossOriginIsolationAnalyzer,
     OriginAgentClusterAnalyzer,
     DocumentPolicyAnalyzer,
-    
     # Privacy headers
     ReferrerPolicyAnalyzer,
     PermissionsPolicyAnalyzer,
-    
     # CORS configuration
     CORSAnalyzer,
-    
     # Cookie security
     CookieAnalyzer,
-    
     # Additional headers (Server, X-Powered-By, etc.)
     AdditionalHeadersAnalyzer,
 ]
@@ -73,7 +65,6 @@ ALL_ANALYZERS = [
 __all__ = [
     # Base class
     "BaseAnalyzer",
-    
     # Core analyzers
     "CSPAnalyzer",
     "EnhancedCSPAnalyzer",
@@ -85,12 +76,10 @@ __all__ = [
     "CORSAnalyzer",
     "CookieAnalyzer",
     "AdditionalHeadersAnalyzer",
-    
     # Cross-origin isolation
     "CrossOriginIsolationAnalyzer",
     "OriginAgentClusterAnalyzer",
     "DocumentPolicyAnalyzer",
-    
     # Registry
     "ALL_ANALYZERS",
 ]
