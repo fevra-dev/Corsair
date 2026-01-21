@@ -1,0 +1,38 @@
+name: Security Header Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Corsair
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Run security scan
+        run: |
+          corsair scan https://your-site.com \
+            --output sarif \
+            --out-file results.sarif \
+            --save-history \
+            --no-banner || true
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+          category: corsair
