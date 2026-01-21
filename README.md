@@ -31,7 +31,7 @@ A comprehensive security header analysis tool with CVE correlation, technology f
 
 ```bash
 # From source
-git clone https://github.com/fevra/corsair.git
+git clone https://github.com/fevra-dev/Corsair.git
 cd corsair
 pip install -e .
 
@@ -123,7 +123,7 @@ for finding in result.findings:
 
 ## Author
 
-**Fevra** - [GitHub](https://github.com/fevra)
+**Fevra** - [GitHub](https://github.com/fevra-dev)
 
 ## License
 

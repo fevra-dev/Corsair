@@ -78,11 +78,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/fevra/corsair"
-Documentation = "https://github.com/fevra/corsair#readme"
-Repository = "https://github.com/fevra/corsair"
-Issues = "https://github.com/fevra/corsair/issues"
-Changelog = "https://github.com/fevra/corsair/releases"
+Homepage = "https://github.com/fevra-dev/Corsair"
+Documentation = "https://github.com/fevra-dev/Corsair#readme"
+Repository = "https://github.com/fevra-dev/Corsair"
+Issues = "https://github.com/fevra-dev/Corsair/issues"
+Changelog = "https://github.com/fevra-dev/Corsair/releases"
 
 [project.scripts]
 corsair = "corsair.cli:main"

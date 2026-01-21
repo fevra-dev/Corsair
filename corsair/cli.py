@@ -579,7 +579,7 @@ def about() -> None:
 
   Built for the 2026 threat landscape.
   
-  GitHub: https://github.com/fevra/corsair
+  GitHub: https://github.com/fevra-dev/Corsair
     """
     )
 

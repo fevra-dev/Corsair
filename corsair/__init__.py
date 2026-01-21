@@ -20,7 +20,7 @@ Usage:
     result = scanner.scan_target("https://example.com")
     print(f"Score: {result.score}/100 ({result.grade})")
 
-GitHub: https://github.com/fevra/corsair
+GitHub: https://github.com/fevra-dev/Corsair
 License: MIT
 """
 
@@ -29,7 +29,7 @@ __author__ = "Fevra"
 __license__ = "MIT"
 __app_name__ = "Corsair"
 __description__ = "HTTP Security Header Scanner & Analyzer"
-__url__ = "https://github.com/fevra/corsair"
+__url__ = "https://github.com/fevra-dev/Corsair"
 
 # Core exports
 from .scanner import HeadScanner

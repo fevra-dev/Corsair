@@ -60,7 +60,7 @@ class SARIFReporter(BaseReporter):
         self,
         tool_name: str = "Corsair",
         tool_version: str = "0.1.0",
-        tool_uri: str = "https://github.com/fevra/corsair",
+        tool_uri: str = "https://github.com/fevra-dev/Corsair",
         quiet: bool = False,
         verbose: bool = False,
         no_color: bool = False,
