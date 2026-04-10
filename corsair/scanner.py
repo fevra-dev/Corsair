@@ -12,6 +12,9 @@ import logging
 from .models import TargetResult, ScanReport, Finding, Severity
 from .analyzers import ALL_ANALYZERS
 from .scoring import calculate_score, calculate_grade
+from .tls import tls_available
+from .tls.auditor import TLSAuditor
+from .tls.findings import get_finding as get_tls_finding
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +148,19 @@ class HeadScanner:
 
         # Analyze headers
         findings = self._analyze_headers(headers, final_url)
+
+        # TLS audit (auto-detect HTTPS)
+        if final_url.startswith("https://") and tls_available():
+            try:
+                tls_auditor = TLSAuditor(timeout=self.timeout)
+                tls_findings = tls_auditor.audit(final_url)
+                findings.extend(tls_findings)
+            except Exception as e:
+                logger.error(f"TLS audit failed: {e}")
+        elif final_url.startswith("http://") and not final_url.startswith("https://"):
+            tls_missing = get_tls_finding("TLS_MISSING")
+            if tls_missing:
+                findings.append(tls_missing)
 
         # Calculate score
         score = calculate_score(findings)
