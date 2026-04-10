@@ -55,8 +55,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# TLS/SSL auditing (sslyze is AGPL-3.0; kept optional to preserve MIT license)
+tls = [
+    "sslyze>=6.0.0",
+]
 # Full installation with all features
 full = [
+    "sslyze>=6.0.0",
     "reportlab>=4.0.0",
     "openpyxl>=3.1.0",
     "aiosqlite>=0.19.0",
@@ -75,6 +80,7 @@ dev = [
     "black>=24.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "sslyze>=6.0.0",
 ]
 
 [project.urls]
