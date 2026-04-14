@@ -100,6 +100,9 @@ include = ["corsair*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "slow: marks tests that hit external services (deselect with '-m \"not slow\"')",
+]
 
 [tool.black]
 line-length = 100
