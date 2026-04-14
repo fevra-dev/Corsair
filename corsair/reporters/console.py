@@ -2,6 +2,7 @@
 
 import click
 from ..models import ScanReport, TargetResult, Finding, Severity
+from ..tls import tls_available
 from .base import BaseReporter
 
 
@@ -36,6 +37,17 @@ class ConsoleReporter(BaseReporter):
 
         for result in report.results:
             lines.extend(self._format_result(result))
+
+        # TLS hint when sslyze is not installed
+        if not tls_available():
+            has_https = any(
+                r.final_url.startswith("https://") for r in report.results if not r.error
+            )
+            if has_https:
+                hint = "  ℹ TLS analysis available: pip install corsair-scan[tls]"
+                if not self.no_color:
+                    hint = click.style(hint, dim=True)
+                lines.append(hint)
 
         # Summary
         if not self.quiet and len(report.results) > 1:
