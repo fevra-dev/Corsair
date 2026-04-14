@@ -17,6 +17,20 @@ def _mock_cipher_suite(name: str, key_size: int = 256, is_anonymous: bool = Fals
     return suite
 
 
+def _wrap_attempt(inner_result):
+    """Wrap an inner result in an sslyze 6.0 ScanAttempt-like object."""
+    attempt = MagicMock(spec=["result"])
+    attempt.result = inner_result
+    return attempt
+
+
+def _mock_cipher_result(suites):
+    """Create a cipher suites scan result wrapped in an attempt."""
+    inner = MagicMock(spec=["accepted_cipher_suites"])
+    inner.accepted_cipher_suites = suites if suites is not None else []
+    return _wrap_attempt(inner)
+
+
 def _mock_scan_result(
     ssl2_suites=None,
     ssl3_suites=None,
@@ -37,57 +51,47 @@ def _mock_scan_result(
     cert_days_until_expiry=365,
     ocsp_stapling=True,
 ):
-    """Build a mock sslyze ServerScanResult."""
+    """Build a mock sslyze ServerScanResult matching sslyze 6.0 structure."""
     result = MagicMock()
 
-    # Protocol suites
-    for attr, suites in [
-        ("ssl_2_0_cipher_suites", ssl2_suites),
-        ("ssl_3_0_cipher_suites", ssl3_suites),
-        ("tls_1_0_cipher_suites", tls10_suites),
-        ("tls_1_1_cipher_suites", tls11_suites),
-        ("tls_1_2_cipher_suites", tls12_suites),
-        ("tls_1_3_cipher_suites", tls13_suites),
-    ]:
-        cmd_result = MagicMock()
-        if suites is None:
-            cmd_result.accepted_cipher_suites = []
-        else:
-            cmd_result.accepted_cipher_suites = suites
-        setattr(result.scan_result, attr, cmd_result)
+    # Protocol suites — wrapped in attempt objects
+    result.scan_result.ssl_2_0_cipher_suites = _mock_cipher_result(ssl2_suites)
+    result.scan_result.ssl_3_0_cipher_suites = _mock_cipher_result(ssl3_suites)
+    result.scan_result.tls_1_0_cipher_suites = _mock_cipher_result(tls10_suites)
+    result.scan_result.tls_1_1_cipher_suites = _mock_cipher_result(tls11_suites)
+    result.scan_result.tls_1_2_cipher_suites = _mock_cipher_result(tls12_suites)
+    result.scan_result.tls_1_3_cipher_suites = _mock_cipher_result(tls13_suites)
 
     # Heartbleed
-    hb = MagicMock()
-    hb.is_vulnerable_to_heartbleed = heartbleed_vulnerable
-    result.scan_result.heartbleed = hb
+    hb_inner = MagicMock(spec=["is_vulnerable_to_heartbleed"])
+    hb_inner.is_vulnerable_to_heartbleed = heartbleed_vulnerable
+    result.scan_result.heartbleed = _wrap_attempt(hb_inner)
 
     # ROBOT
-    robot = MagicMock()
+    robot_inner = MagicMock(spec=["robot_result"])
+    robot_inner.robot_result = MagicMock()
     if robot_vulnerable:
-        robot.robot_result.name = "VULNERABLE_STRONG_ORACLE"
+        robot_inner.robot_result.name = "VULNERABLE_STRONG_ORACLE"
     else:
-        robot.robot_result.name = "NOT_VULNERABLE_NO_ORACLE"
-    result.scan_result.robot = robot
+        robot_inner.robot_result.name = "NOT_VULNERABLE_NO_ORACLE"
+    result.scan_result.robot = _wrap_attempt(robot_inner)
 
     # CCS Injection
-    ccs = MagicMock()
-    ccs.is_vulnerable_to_ccs_injection = ccs_injection_vulnerable
-    result.scan_result.openssl_ccs_injection = ccs
+    ccs_inner = MagicMock(spec=["is_vulnerable_to_ccs_injection"])
+    ccs_inner.is_vulnerable_to_ccs_injection = ccs_injection_vulnerable
+    result.scan_result.openssl_ccs_injection = _wrap_attempt(ccs_inner)
 
     # TLS Compression
-    comp = MagicMock()
-    comp.supports_compression = compression_enabled
-    result.scan_result.tls_compression = comp
+    comp_inner = MagicMock(spec=["supports_compression"])
+    comp_inner.supports_compression = compression_enabled
+    result.scan_result.tls_compression = _wrap_attempt(comp_inner)
 
     # Fallback SCSV
-    fb = MagicMock()
-    fb.supports_fallback_scsv = fallback_scsv_supported
-    result.scan_result.tls_fallback_scsv = fb
+    fb_inner = MagicMock(spec=["supports_fallback_scsv"])
+    fb_inner.supports_fallback_scsv = fallback_scsv_supported
+    result.scan_result.tls_fallback_scsv = _wrap_attempt(fb_inner)
 
     # Certificate info
-    cert_info = MagicMock()
-    cert_deployment = MagicMock()
-
     leaf_cert = MagicMock()
     now = datetime.now(timezone.utc)
 
@@ -98,14 +102,21 @@ def _mock_scan_result(
     leaf_cert.not_valid_before = now - timedelta(days=30)
     leaf_cert.public_key.return_value.key_size = cert_key_size
     leaf_cert.signature_hash_algorithm.name = cert_sig_algorithm
+    # Remove not_valid_after_utc so analyzers fall back to not_valid_after
+    del leaf_cert.not_valid_after_utc
 
+    cert_deployment = MagicMock()
     cert_deployment.received_certificate_chain = [leaf_cert]
     cert_deployment.leaf_certificate_subject_matches_hostname = not cert_hostname_mismatch
     cert_deployment.verified_certificate_chain = None if cert_self_signed else [leaf_cert]
     cert_deployment.ocsp_response_is_trusted = ocsp_stapling
+    # Remove sslyze 6.0 specific attrs so analyzers use the mock attrs above
+    del cert_deployment.verified_chain_has_sha1_signature
+    del cert_deployment.path_validation_results
 
-    cert_info.certificate_deployments = [cert_deployment]
-    result.scan_result.certificate_info = cert_info
+    cert_info_inner = MagicMock(spec=["certificate_deployments"])
+    cert_info_inner.certificate_deployments = [cert_deployment]
+    result.scan_result.certificate_info = _wrap_attempt(cert_info_inner)
 
     return result
 
