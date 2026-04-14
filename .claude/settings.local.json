@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m pip --version)",
+      "Bash(python3 -m pip install -e \".[tls,dev]\")",
+      "Bash(python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(python -m pytest tests/test_tls_init.py -v)",
+      "Bash(git commit:*)",
+      "Bash(python -m pytest tests/test_tls_analyzers.py -v)",
+      "Bash(python -m pytest tests/test_tls_auditor_unit.py -v)",
+      "Bash(python -c \"import sslyze; print\\('sslyze available'\\)\")",
+      "Bash(python -c \"from corsair.tls.auditor import TLSAuditor; print\\('TLSAuditor importable'\\)\")",
+      "Bash(python:*)"
+    ]
+  }
+}

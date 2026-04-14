@@ -1,11 +1,10 @@
 """Test TLS analyzers — maps sslyze results to Corsair findings."""
 
-import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock
 
-from corsair.tls.analyzers import analyze_scan_result
 from corsair.models import Severity
+from corsair.tls.analyzers import analyze_scan_result
 
 
 def _mock_cipher_suite(name: str, key_size: int = 256, is_anonymous: bool = False):
@@ -126,12 +125,16 @@ class TestProtocolAnalysis:
         assert any("SSLv3" in f.title for f in findings)
 
     def test_tls10_detected(self):
-        result = _mock_scan_result(tls10_suites=[_mock_cipher_suite("TLS_RSA_WITH_AES_128_CBC_SHA")])
+        result = _mock_scan_result(
+            tls10_suites=[_mock_cipher_suite("TLS_RSA_WITH_AES_128_CBC_SHA")]
+        )
         findings = analyze_scan_result(result)
         assert any("TLS 1.0" in f.title for f in findings)
 
     def test_tls11_detected(self):
-        result = _mock_scan_result(tls11_suites=[_mock_cipher_suite("TLS_RSA_WITH_AES_128_CBC_SHA")])
+        result = _mock_scan_result(
+            tls11_suites=[_mock_cipher_suite("TLS_RSA_WITH_AES_128_CBC_SHA")]
+        )
         findings = analyze_scan_result(result)
         assert any("TLS 1.1" in f.title for f in findings)
 
@@ -149,7 +152,9 @@ class TestProtocolAnalysis:
             tls13_suites=[_mock_cipher_suite("TLS_AES_256_GCM_SHA384")],
         )
         findings = analyze_scan_result(result)
-        protocol_findings = [f for f in findings if "Protocol" in f.title or "TLS 1." in f.title or "SSL" in f.title]
+        protocol_findings = [
+            f for f in findings if "Protocol" in f.title or "TLS 1." in f.title or "SSL" in f.title
+        ]
         assert len(protocol_findings) == 0
 
 

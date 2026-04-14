@@ -9,11 +9,11 @@ import copy
 from typing import Optional
 
 from ..models import (
-    Finding,
-    Severity,
-    HeaderCategory,
-    CVECorrelation,
     ComplianceMapping,
+    CVECorrelation,
+    Finding,
+    HeaderCategory,
+    Severity,
 )
 
 
@@ -181,7 +181,9 @@ _WEAK_CIPHER_3DES = Finding(
     recommendation="Remove 3DES cipher suites. Use AES-GCM or ChaCha20-Poly1305.",
     example_value="TLS_AES_256_GCM_SHA384",
     reference_url="https://sweet32.info/",
-    cve_correlations=[_cve("CVE-2016-2183", 5.3, "Sweet32: birthday attack on 64-bit block ciphers")],
+    cve_correlations=[
+        _cve("CVE-2016-2183", 5.3, "Sweet32: birthday attack on 64-bit block ciphers")
+    ],
     compliance_mappings=[_OWASP_A02, _PCI_TLS],
 )
 
@@ -345,7 +347,9 @@ _HEARTBLEED = Finding(
     recommendation="Upgrade OpenSSL immediately to a patched version (>= 1.0.1g). Revoke and reissue all certificates. Rotate all credentials.",
     example_value="OpenSSL >= 1.0.1g",
     reference_url="https://heartbleed.com/",
-    cve_correlations=[_cve("CVE-2014-0160", 7.5, "Heartbleed: OpenSSL heartbeat buffer overread", kev=True)],
+    cve_correlations=[
+        _cve("CVE-2014-0160", 7.5, "Heartbleed: OpenSSL heartbeat buffer overread", kev=True)
+    ],
     compliance_mappings=[_OWASP_A02, _PCI_TLS, _NIST_TLS],
 )
 

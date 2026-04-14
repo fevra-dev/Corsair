@@ -1,10 +1,9 @@
 """Unit tests for TLSAuditor (mocked sslyze, no network)."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from corsair.tls.auditor import TLSAuditor
 from corsair.models import Severity
+from corsair.tls.auditor import TLSAuditor
 
 
 class TestParseTarget:

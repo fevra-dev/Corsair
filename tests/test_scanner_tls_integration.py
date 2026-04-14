@@ -1,10 +1,9 @@
 """Test TLS integration in HeadScanner."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from corsair.scanner import HeadScanner
 from corsair.models import Severity
+from corsair.scanner import HeadScanner
 
 
 class TestScannerTLSIntegration:
@@ -16,8 +15,13 @@ class TestScannerTLSIntegration:
 
         scanner = HeadScanner()
         with patch.object(scanner, "_fetch_headers") as mock_fetch:
-            mock_fetch.return_value = (200, {"Content-Type": "text/html"}, "https://example.com", None)
-            result = scanner.scan_target("https://example.com")
+            mock_fetch.return_value = (
+                200,
+                {"Content-Type": "text/html"},
+                "https://example.com",
+                None,
+            )
+            scanner.scan_target("https://example.com")
 
         mock_instance.audit.assert_called_once_with("https://example.com")
 
@@ -25,7 +29,12 @@ class TestScannerTLSIntegration:
     def test_tls_audit_skipped_when_unavailable(self, mock_available):
         scanner = HeadScanner()
         with patch.object(scanner, "_fetch_headers") as mock_fetch:
-            mock_fetch.return_value = (200, {"Content-Type": "text/html"}, "https://example.com", None)
+            mock_fetch.return_value = (
+                200,
+                {"Content-Type": "text/html"},
+                "https://example.com",
+                None,
+            )
             result = scanner.scan_target("https://example.com")
 
         # Should complete without error, no TLS findings
@@ -35,10 +44,17 @@ class TestScannerTLSIntegration:
     def test_http_target_gets_tls_missing(self, mock_available):
         scanner = HeadScanner()
         with patch.object(scanner, "_fetch_headers") as mock_fetch:
-            mock_fetch.return_value = (200, {"Content-Type": "text/html"}, "http://example.com", None)
+            mock_fetch.return_value = (
+                200,
+                {"Content-Type": "text/html"},
+                "http://example.com",
+                None,
+            )
             result = scanner.scan_target("http://example.com")
 
-        tls_missing = [f for f in result.findings if "TLS" in f.header and f.severity == Severity.CRITICAL]
+        tls_missing = [
+            f for f in result.findings if "TLS" in f.header and f.severity == Severity.CRITICAL
+        ]
         assert len(tls_missing) == 1
         assert "HTTP Only" in tls_missing[0].title or "No TLS" in tls_missing[0].title
 
@@ -46,8 +62,8 @@ class TestScannerTLSIntegration:
 class TestTLSHint:
     @patch("corsair.reporters.console.tls_available", return_value=False)
     def test_hint_shown_when_sslyze_absent(self, mock_available):
-        from corsair.reporters.console import ConsoleReporter
         from corsair.models import ScanReport, TargetResult
+        from corsair.reporters.console import ConsoleReporter
 
         result = TargetResult(
             url="https://example.com",
@@ -74,8 +90,8 @@ class TestTLSHint:
 
     @patch("corsair.reporters.console.tls_available", return_value=True)
     def test_hint_not_shown_when_sslyze_present(self, mock_available):
-        from corsair.reporters.console import ConsoleReporter
         from corsair.models import ScanReport, TargetResult
+        from corsair.reporters.console import ConsoleReporter
 
         result = TargetResult(
             url="https://example.com",

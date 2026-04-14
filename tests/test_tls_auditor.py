@@ -6,13 +6,14 @@ Skipped in CI by default.
 """
 
 import pytest
+
 from corsair.tls import tls_available
 
 if not tls_available():
     pytest.skip("sslyze not installed", allow_module_level=True)
 
-from corsair.tls.auditor import TLSAuditor
 from corsair.models import Severity
+from corsair.tls.auditor import TLSAuditor
 
 
 @pytest.fixture

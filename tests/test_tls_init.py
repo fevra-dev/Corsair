@@ -1,7 +1,6 @@
 """Test TLS module availability check."""
 
-import pytest
-from corsair.tls import tls_available, TLS_AVAILABLE
+from corsair.tls import TLS_AVAILABLE, tls_available
 
 
 class TestTLSAvailability:

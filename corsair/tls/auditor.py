@@ -10,8 +10,8 @@ from typing import List, Tuple
 from urllib.parse import urlparse
 
 from ..models import Finding
-from .findings import get_finding
 from .analyzers import analyze_scan_result
+from .findings import get_finding
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +65,10 @@ class TLSAuditor:
     def _run_scan(self, hostname: str, port: int):
         """Execute sslyze scan with all relevant ScanCommands."""
         from sslyze import (
-            Scanner,
-            ServerScanRequest,
-            ServerNetworkLocation,
             ScanCommand,
+            Scanner,
+            ServerNetworkLocation,
+            ServerScanRequest,
         )
 
         location = ServerNetworkLocation(hostname=hostname, port=port)

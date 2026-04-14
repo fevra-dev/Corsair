@@ -1,16 +1,15 @@
 """Test TLS finding definitions are complete and consistent."""
 
-import pytest
-from corsair.tls.findings import ALL_TLS_FINDINGS, get_finding
 from corsair.models import HeaderCategory, Severity
+from corsair.tls.findings import ALL_TLS_FINDINGS, get_finding
 
 
 class TestTLSFindingDefinitions:
     def test_all_findings_use_transport_category(self):
         for finding_id, finding in ALL_TLS_FINDINGS.items():
-            assert finding.category == HeaderCategory.TRANSPORT, (
-                f"{finding_id} has category {finding.category}, expected TRANSPORT"
-            )
+            assert (
+                finding.category == HeaderCategory.TRANSPORT
+            ), f"{finding_id} has category {finding.category}, expected TRANSPORT"
 
     def test_all_findings_have_required_fields(self):
         for finding_id, finding in ALL_TLS_FINDINGS.items():
@@ -26,10 +25,17 @@ class TestTLSFindingDefinitions:
 
     def test_critical_findings_exist(self):
         critical_ids = [
-            "TLS_MISSING", "DEPRECATED_PROTOCOL_SSL2", "DEPRECATED_PROTOCOL_SSL3",
-            "WEAK_CIPHER_RC4", "WEAK_CIPHER_NULL", "WEAK_CIPHER_EXPORT",
-            "CERT_EXPIRED", "CERT_HOSTNAME_MISMATCH",
-            "HEARTBLEED", "ROBOT", "OPENSSL_CCS_INJECTION",
+            "TLS_MISSING",
+            "DEPRECATED_PROTOCOL_SSL2",
+            "DEPRECATED_PROTOCOL_SSL3",
+            "WEAK_CIPHER_RC4",
+            "WEAK_CIPHER_NULL",
+            "WEAK_CIPHER_EXPORT",
+            "CERT_EXPIRED",
+            "CERT_HOSTNAME_MISMATCH",
+            "HEARTBLEED",
+            "ROBOT",
+            "OPENSSL_CCS_INJECTION",
         ]
         for fid in critical_ids:
             assert fid in ALL_TLS_FINDINGS, f"Missing critical finding: {fid}"

@@ -77,8 +77,12 @@ def _analyze_ciphers(scan_result) -> List[Finding]:
 
     # Also check older protocols for weak ciphers
     all_suite_names = list(tls12_suites)
-    for attr in ["ssl_2_0_cipher_suites", "ssl_3_0_cipher_suites",
-                 "tls_1_0_cipher_suites", "tls_1_1_cipher_suites"]:
+    for attr in [
+        "ssl_2_0_cipher_suites",
+        "ssl_3_0_cipher_suites",
+        "tls_1_0_cipher_suites",
+        "tls_1_1_cipher_suites",
+    ]:
         cmd_result = getattr(sr, attr, None)
         if cmd_result:
             all_suite_names.extend(s.cipher_suite.name for s in cmd_result.accepted_cipher_suites)
