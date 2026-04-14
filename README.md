@@ -13,16 +13,17 @@
 
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-0.1.0-orange)
+![Version](https://img.shields.io/badge/version-0.2.0-orange)
 
-A comprehensive security header analysis tool with CVE correlation, technology fingerprinting, and AI-powered remediation. Built for the 2026 threat landscape.
+A comprehensive security scanner with HTTP header analysis, TLS/SSL auditing, CVE correlation, technology fingerprinting, and AI-powered remediation. Built for the 2026 threat landscape.
 
 ## Features
 
 - **60+ Header Checks** - CSP, HSTS, COOP, COEP, CORP, Permissions-Policy, and more
+- **TLS/SSL Auditing** - Protocol versions, cipher suites, certificate validation, and vulnerability detection (Heartbleed, ROBOT, CRIME, and more)
 - **1,200+ Fingerprinting Signatures** - Detect servers, CDNs, WAFs, and frameworks
 - **CVE Correlation** - Map misconfigurations to known vulnerabilities with CISA KEV integration
-- **Compliance Mapping** - OWASP Top 10 2025, PCI-DSS 4.0, SOC 2
+- **Compliance Mapping** - OWASP Top 10 2025, PCI-DSS 4.0, NIST SP 800-52r2, SOC 2
 - **Historical Tracking** - Monitor security posture changes with drift detection
 - **AI Integration** - MCP server for Claude/GPT-powered remediation
 - **Multiple Outputs** - Console, JSON, HTML, SARIF (GitHub Code Scanning)
@@ -35,12 +36,17 @@ git clone https://github.com/fevra-dev/Corsair.git
 cd corsair
 pip install -e .
 
-# With all features
+# With TLS/SSL auditing
+pip install -e ".[tls]"
+
+# With all features (includes TLS)
 pip install -e ".[full]"
 
 # With MCP/AI integration (Python 3.10+)
 pip install -e ".[mcp]"
 ```
+
+> **Note:** TLS auditing uses [sslyze](https://github.com/nabla-c0d3/sslyze) (AGPL-3.0), which is kept as an optional dependency to preserve Corsair's MIT license.
 
 ## Quick Start
 
@@ -110,6 +116,20 @@ for finding in result.findings:
 **Cookies**: Secure, HttpOnly, SameSite, __Host- prefix, __Secure- prefix
 
 **Information Disclosure**: Server, X-Powered-By, X-AspNet-Version
+
+## TLS/SSL Auditing
+
+When sslyze is installed, Corsair automatically audits TLS configuration on HTTPS targets. 25 checks across four categories:
+
+**Protocols**: SSLv2 (DROWN), SSLv3 (POODLE), TLS 1.0 (BEAST), TLS 1.1, TLS 1.3 support
+
+**Cipher Suites**: RC4, 3DES (Sweet32), NULL, EXPORT (LOGJAM), forward secrecy, weak DH parameters
+
+**Certificates**: Expiry, hostname mismatch, self-signed, weak signatures (SHA-1/MD5), short keys, OCSP stapling
+
+**Vulnerabilities**: Heartbleed (CVE-2014-0160), ROBOT, CCS Injection (CVE-2014-0224), TLS compression (CRIME), missing FALLBACK_SCSV
+
+TLS findings deduct from the same 0-100 score as header findings. A site with perfect headers but broken TLS will get a bad grade.
 
 ## Scoring
 
