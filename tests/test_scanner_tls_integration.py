@@ -41,3 +41,61 @@ class TestScannerTLSIntegration:
         tls_missing = [f for f in result.findings if "TLS" in f.header and f.severity == Severity.CRITICAL]
         assert len(tls_missing) == 1
         assert "HTTP Only" in tls_missing[0].title or "No TLS" in tls_missing[0].title
+
+
+class TestTLSHint:
+    @patch("corsair.reporters.console.tls_available", return_value=False)
+    def test_hint_shown_when_sslyze_absent(self, mock_available):
+        from corsair.reporters.console import ConsoleReporter
+        from corsair.models import ScanReport, TargetResult
+
+        result = TargetResult(
+            url="https://example.com",
+            final_url="https://example.com",
+            status_code=200,
+            headers={},
+            findings=[],
+            score=100,
+            grade="A",
+        )
+
+        report = ScanReport(
+            targets_scanned=1,
+            average_score=100.0,
+            scan_start="2026-01-01T00:00:00",
+            scan_end="2026-01-01T00:00:01",
+            scan_duration_ms=1000,
+            results=[result],
+        )
+
+        reporter = ConsoleReporter()
+        output = reporter.generate(report)
+        assert "pip install corsair-scan[tls]" in output
+
+    @patch("corsair.reporters.console.tls_available", return_value=True)
+    def test_hint_not_shown_when_sslyze_present(self, mock_available):
+        from corsair.reporters.console import ConsoleReporter
+        from corsair.models import ScanReport, TargetResult
+
+        result = TargetResult(
+            url="https://example.com",
+            final_url="https://example.com",
+            status_code=200,
+            headers={},
+            findings=[],
+            score=100,
+            grade="A",
+        )
+
+        report = ScanReport(
+            targets_scanned=1,
+            average_score=100.0,
+            scan_start="2026-01-01T00:00:00",
+            scan_end="2026-01-01T00:00:01",
+            scan_duration_ms=1000,
+            results=[result],
+        )
+
+        reporter = ConsoleReporter()
+        output = reporter.generate(report)
+        assert "pip install corsair-scan[tls]" not in output
