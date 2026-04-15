@@ -60,3 +60,6 @@ htmlcov/
 # Local config
 .env
 .env.local
+
+# Git worktrees
+.worktrees/
