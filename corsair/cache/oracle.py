@@ -6,10 +6,13 @@ active probing begins. It determines which CDN is present, whether
 responses are cached, and how to safely isolate probe requests.
 """
 
+import asyncio
 import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
+
+import httpx
 
 
 class CacheStatus(Enum):
@@ -114,13 +117,13 @@ def make_buster() -> str:
     return uuid.uuid4().hex[:16]
 
 
-def build_buster_params(oracle: CacheOracle, buster: str) -> dict:
+def build_buster_params(oracle: CacheOracle, buster: str) -> dict[str, str]:
     if oracle.buster_strategy == "query_param":
         return {oracle.buster_param: buster}
     return {}
 
 
-def build_buster_headers(oracle: CacheOracle, buster: str) -> dict:
+def build_buster_headers(oracle: CacheOracle, buster: str) -> dict[str, str]:
     if oracle.buster_strategy == "accept_language":
         return {"Accept-Language": f"en-{buster[:4]},en;q=0.9"}
     if oracle.buster_strategy == "user_agent":
@@ -129,12 +132,10 @@ def build_buster_headers(oracle: CacheOracle, buster: str) -> dict:
 
 
 async def establish_oracle(
-    client,
+    client: "httpx.AsyncClient",
     url: str,
     timeout: float = 10.0,
 ) -> CacheOracle:
-    import asyncio
-
     oracle = CacheOracle(url=url)
     buster = make_buster()
 
@@ -143,10 +144,10 @@ async def establish_oracle(
         params={oracle.buster_param: buster},
         timeout=timeout,
     )
-    r1_headers = dict(r1.headers)
+    r1_headers = {k.lower(): v for k, v in r1.headers.items()}
     oracle.cdn_fingerprint = fingerprint_cdn(r1_headers)
-    oracle.cache_control = r1_headers.get("cache-control") or r1_headers.get("Cache-Control")
-    oracle.vary_header = r1_headers.get("vary") or r1_headers.get("Vary")
+    oracle.cache_control = r1_headers.get("cache-control")
+    oracle.vary_header = r1_headers.get("vary")
     s1 = read_cache_status(r1_headers, oracle.cdn_fingerprint)
 
     if oracle.cdn_fingerprint == "akamai":
@@ -160,7 +161,7 @@ async def establish_oracle(
             cache_key_hdr = r_pragma.headers.get("x-cache-key")
             if cache_key_hdr:
                 oracle.akamai_cache_key = cache_key_hdr
-        except Exception:
+        except (httpx.HTTPError, httpx.TimeoutException):
             pass
 
     await asyncio.sleep(0.3)
@@ -169,7 +170,7 @@ async def establish_oracle(
         params={oracle.buster_param: buster},
         timeout=timeout,
     )
-    r2_headers = dict(r2.headers)
+    r2_headers = {k.lower(): v for k, v in r2.headers.items()}
     s2 = read_cache_status(r2_headers, oracle.cdn_fingerprint)
 
     oracle.is_cached = s2 == CacheStatus.HIT
