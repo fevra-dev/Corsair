@@ -43,6 +43,7 @@ CONTEXT_SEVERITY_ORDER: list[str] = [
     "csp_header",
     "location_header",
     "link_href",
+    "link_header",
     "meta_refresh",
     "cors_header",
     "js_variable",
@@ -80,11 +81,7 @@ def detect_reflection(
 
         found_contexts.extend(body_matches)
 
-        if not body_matches and all(
-            c in ("other_header",) for c in found_contexts
-        ):
-            found_contexts.append("body_text")
-        elif not body_matches and not found_contexts:
+        if not body_matches and all(c == "other_header" for c in found_contexts):
             found_contexts.append("body_text")
 
     if not found_contexts:
