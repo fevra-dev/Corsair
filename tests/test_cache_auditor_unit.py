@@ -51,8 +51,7 @@ class TestCacheAuditorPassive:
         ):
             findings = auditor.audit("https://example.com", headers)
         assert any(
-            f.title == "Missing Vary: Origin on CORS-enabled cached response"
-            for f in findings
+            f.title == "Missing Vary: Origin on CORS-enabled cached response" for f in findings
         )
 
     def test_cache_public_sensitive_detected(self):
@@ -70,8 +69,7 @@ class TestCacheAuditorPassive:
         ):
             findings = auditor.audit("https://example.com", headers)
         assert any(
-            "authenticated content" in f.title.lower()
-            or "public caching" in f.title.lower()
+            "authenticated content" in f.title.lower() or "public caching" in f.title.lower()
             for f in findings
         )
 
@@ -101,9 +99,7 @@ class TestCacheAuditorActiveSkip:
         auditor = CacheAuditor(active=True)
         with patch(
             "corsair.cache.auditor.establish_oracle",
-            new=AsyncMock(
-                return_value=_mock_oracle(is_cached=True, buster_strategy="none")
-            ),
+            new=AsyncMock(return_value=_mock_oracle(is_cached=True, buster_strategy="none")),
         ):
             with patch("corsair.cache.auditor.probe_single_header") as mock_probe:
                 findings = auditor.audit("https://example.com", {})

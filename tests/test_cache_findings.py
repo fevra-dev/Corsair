@@ -1,7 +1,7 @@
 """Test cache poisoning finding definitions are complete and consistent."""
 
-from corsair.models import HeaderCategory, Severity
 from corsair.cache.findings import ALL_CACHE_FINDINGS, get_finding
+from corsair.models import HeaderCategory, Severity
 
 
 class TestCacheFindingDefinitions:

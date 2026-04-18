@@ -45,9 +45,7 @@ class CacheAuditor:
             logger.error(f"Cache audit failed for {url}: {e}")
             return []
 
-    async def _audit_async(
-        self, url: str, headers: dict[str, str]
-    ) -> List[Finding]:
+    async def _audit_async(self, url: str, headers: dict[str, str]) -> List[Finding]:
         findings: List[Finding] = []
 
         async with httpx.AsyncClient(
@@ -80,9 +78,7 @@ class CacheAuditor:
 
         return findings
 
-    def _passive_checks(
-        self, oracle: CacheOracle, headers: dict[str, str]
-    ) -> List[Finding]:
+    def _passive_checks(self, oracle: CacheOracle, headers: dict[str, str]) -> List[Finding]:
         findings: List[Finding] = []
         h = {k.lower(): v for k, v in headers.items()}
 
@@ -109,9 +105,7 @@ class CacheAuditor:
             if "origin" not in vary:
                 finding = get_finding("WCP_NO_VARY_ORIGIN")
                 if finding:
-                    finding.current_value = (
-                        f"ACAO: {acao}, Vary: {oracle.vary_header or 'absent'}"
-                    )
+                    finding.current_value = f"ACAO: {acao}, Vary: {oracle.vary_header or 'absent'}"
                     findings.append(finding)
 
         cc = (oracle.cache_control or "").lower()
@@ -131,9 +125,7 @@ class CacheAuditor:
 
         return findings
 
-    async def _active_probes(
-        self, client: httpx.AsyncClient, oracle: CacheOracle
-    ) -> List[Finding]:
+    async def _active_probes(self, client: httpx.AsyncClient, oracle: CacheOracle) -> List[Finding]:
         findings: List[Finding] = []
         abort_event = asyncio.Event()
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -141,9 +133,7 @@ class CacheAuditor:
         async def limited_probe(header_name, value_template):
             async with semaphore:
                 if abort_event.is_set():
-                    return CanaryResult(
-                        header_name=header_name, canary="", detail="Aborted"
-                    )
+                    return CanaryResult(header_name=header_name, canary="", detail="Aborted")
                 return await probe_single_header(
                     client,
                     oracle,
@@ -156,9 +146,7 @@ class CacheAuditor:
         async def limited_cpdos(probe_func):
             async with semaphore:
                 if abort_event.is_set():
-                    return CanaryResult(
-                        header_name="CPDoS", canary="", detail="Aborted"
-                    )
+                    return CanaryResult(header_name="CPDoS", canary="", detail="Aborted")
                 return await probe_func(
                     client,
                     oracle,

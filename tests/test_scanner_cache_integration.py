@@ -51,9 +51,7 @@ class TestScannerCacheIntegration:
                 mock_instance = MockAuditor.return_value
                 mock_instance.audit.return_value = []
                 scanner.scan_target("https://example.com")
-                MockAuditor.assert_called_once_with(
-                    timeout=scanner.timeout, active=False
-                )
+                MockAuditor.assert_called_once_with(timeout=scanner.timeout, active=False)
 
     @patch("corsair.scanner.tls_available", return_value=False)
     def test_cache_audit_failure_does_not_crash(self, _tls):

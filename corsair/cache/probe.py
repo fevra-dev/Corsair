@@ -8,7 +8,7 @@ Phase 3: Negative correlation (clean request, verify no pollution)
 """
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from .oracle import (
@@ -168,9 +168,7 @@ async def probe_single_header(
 
     if result.confirmed_unkeyed:
         result.severity, result.finding_id = classify_finding(header_name, context)
-        result.detail = (
-            f"Header {header_name} is unkeyed and reflected in {context} context"
-        )
+        result.detail = f"Header {header_name} is unkeyed and reflected in {context} context"
 
     return result
 

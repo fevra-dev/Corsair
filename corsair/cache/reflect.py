@@ -10,9 +10,7 @@ from typing import Optional
 
 _SCRIPT_SRC = re.compile(r'<script[^>]+src=["\']([^"\']*)', re.I)
 _LINK_HREF = re.compile(r'<link[^>]+href=["\']([^"\']*)', re.I)
-_CANONICAL = re.compile(
-    r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']*)', re.I
-)
+_CANONICAL = re.compile(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']*)', re.I)
 _META_REFRESH = re.compile(
     r'<meta[^>]+http-equiv=["\']refresh["\'][^>]+content=["\'][^"\']*url=([^"\';\s]*)', re.I
 )
@@ -54,9 +52,7 @@ CONTEXT_SEVERITY_ORDER: list[str] = [
 ]
 
 
-def detect_reflection(
-    response, canary: str
-) -> tuple[bool, Optional[str]]:
+def detect_reflection(response, canary: str) -> tuple[bool, Optional[str]]:
     found_contexts: list[str] = []
 
     headers = response.headers or {}

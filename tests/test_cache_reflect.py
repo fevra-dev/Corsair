@@ -1,6 +1,7 @@
 """Test reflection detection across security-sensitive contexts."""
 
 from unittest.mock import MagicMock
+
 from corsair.cache.reflect import detect_reflection
 
 

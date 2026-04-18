@@ -1,11 +1,10 @@
 """Test cache oracle: CDN fingerprinting and cache status detection."""
 
 from corsair.cache.oracle import (
-    CacheOracle,
     CacheStatus,
     fingerprint_cdn,
-    read_cache_status,
     make_buster,
+    read_cache_status,
 )
 
 

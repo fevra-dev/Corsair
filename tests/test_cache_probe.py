@@ -3,13 +3,13 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from corsair.cache.oracle import CacheOracle, CacheStatus
+from corsair.cache.oracle import CacheOracle
 from corsair.cache.probe import (
     PROBE_HEADERS,
     CanaryResult,
-    probe_single_header,
-    probe_cpdos_oversize,
     classify_finding,
+    probe_cpdos_oversize,
+    probe_single_header,
 )
 
 
@@ -83,9 +83,7 @@ class TestProbeSingleHeader:
         assert client.get.call_count == 3
 
     def test_buster_strategy_none_skips(self):
-        oracle = CacheOracle(
-            url="https://example.com", is_cached=True, buster_strategy="none"
-        )
+        oracle = CacheOracle(url="https://example.com", is_cached=True, buster_strategy="none")
         client = AsyncMock()
 
         result = asyncio.run(
