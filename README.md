@@ -21,6 +21,7 @@ A comprehensive security scanner with HTTP header analysis, TLS/SSL auditing, CV
 
 - **60+ Header Checks** - CSP, HSTS, COOP, COEP, CORP, Permissions-Policy, and more
 - **TLS/SSL Auditing** - Protocol versions, cipher suites, certificate validation, and vulnerability detection (Heartbleed, ROBOT, CRIME, and more)
+- **Web Cache Poisoning Detection** - CDN fingerprinting, unkeyed header probing, CPDoS detection, and cache oracle analysis
 - **1,200+ Fingerprinting Signatures** - Detect servers, CDNs, WAFs, and frameworks
 - **CVE Correlation** - Map misconfigurations to known vulnerabilities with CISA KEV integration
 - **Compliance Mapping** - OWASP Top 10 2025, PCI-DSS 4.0, NIST SP 800-52r2, SOC 2
@@ -130,6 +131,18 @@ When sslyze is installed, Corsair automatically audits TLS configuration on HTTP
 **Vulnerabilities**: Heartbleed (CVE-2014-0160), ROBOT, CCS Injection (CVE-2014-0224), TLS compression (CRIME), missing FALLBACK_SCSV
 
 TLS findings deduct from the same 0-100 score as header findings. A site with perfect headers but broken TLS will get a bad grade.
+
+## Web Cache Poisoning Detection
+
+Corsair automatically tests for web cache poisoning vulnerabilities on all targets. 16 checks across three categories:
+
+**Passive**: Missing `Vary: Origin`, public caching of authenticated content, unkeyed query strings, permissive cache TTLs
+
+**Active (Canary Injection)**: Probes 16 unkeyed headers (X-Forwarded-Host, X-Original-URL, etc.) using a 3-phase canary injection protocol that safely detects whether injected values persist in cached responses
+
+**CPDoS**: Tests for Cache Poisoning Denial of Service via oversized headers, malformed headers, and method override headers
+
+Active probing uses cache busters to isolate test requests and includes a safety abort if any canary leaks into the live cache. Disable active probing with `--no-cache-probe`.
 
 ## Scoring
 
