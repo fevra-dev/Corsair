@@ -169,6 +169,7 @@ def cli(ctx, version):
 @click.option("--save-history", is_flag=True, help="Save results to history database")
 @click.option("--fingerprint/--no-fingerprint", default=True, help="Run fingerprinting")
 @click.option("--correlate-cve/--no-correlate-cve", default=True, help="Correlate with CVEs")
+@click.option("--cache-probe/--no-cache-probe", default=True, help="Run cache poisoning detection")
 def scan(
     targets: tuple,
     file: Optional[str],
@@ -186,6 +187,7 @@ def scan(
     save_history: bool,
     fingerprint: bool,
     correlate_cve: bool,
+    cache_probe: bool,
 ) -> None:
     """Scan HTTP security headers for target URLs.
 
@@ -226,6 +228,7 @@ def scan(
         follow_redirects=follow_redirects,
         max_redirects=max_redirects,
         user_agent=user_agent,
+        cache_probe=cache_probe,
     )
 
     # Run scan

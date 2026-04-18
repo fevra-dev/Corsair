@@ -1328,6 +1328,7 @@ CONTEXT_TO_SEVERITY: dict[str, tuple[str, str]] = {
     "csp_header": ("CRITICAL", "WCP_UNKEYED_HEADER_CRITICAL"),
     "location_header": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
     "link_href": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
+    "link_header": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
     "meta_refresh": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
     "cors_header": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
     "js_variable": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),

@@ -15,6 +15,7 @@ from .scoring import calculate_score, calculate_grade
 from .tls import tls_available
 from .tls.auditor import TLSAuditor
 from .tls.findings import get_finding as get_tls_finding
+from .cache.auditor import CacheAuditor
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class HeadScanner:
         follow_redirects: bool = True,
         max_redirects: int = 5,
         user_agent: str = "HeadScan/1.0 (Security Header Analyzer)",
+        cache_probe: bool = True,
     ):
         """
         Initialize scanner.
@@ -37,11 +39,13 @@ class HeadScanner:
             follow_redirects: Whether to follow redirects
             max_redirects: Maximum redirects to follow
             user_agent: User-Agent header value
+            cache_probe: Whether to run active cache poisoning probes
         """
         self.timeout = timeout
         self.follow_redirects = follow_redirects
         self.max_redirects = max_redirects
         self.user_agent = user_agent
+        self.cache_probe = cache_probe
 
         logger.info(
             f"Scanner initialized: timeout={timeout}s, " f"follow_redirects={follow_redirects}"
@@ -161,6 +165,14 @@ class HeadScanner:
             tls_missing = get_tls_finding("TLS_MISSING")
             if tls_missing:
                 findings.append(tls_missing)
+
+        # Cache poisoning audit
+        try:
+            cache_auditor = CacheAuditor(timeout=self.timeout, active=self.cache_probe)
+            cache_findings = cache_auditor.audit(final_url, headers)
+            findings.extend(cache_findings)
+        except Exception as e:
+            logger.error(f"Cache audit failed: {e}")
 
         # Calculate score
         score = calculate_score(findings)
