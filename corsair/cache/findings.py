@@ -195,6 +195,70 @@ _WCP_LIVE_CACHE_POISONED = Finding(
     cve_correlations=[_CWE_444],
 )
 
+_WCP_ALT_SVC_POISONING = Finding(
+    header="Alt-Svc",
+    category=HeaderCategory.CACHING,
+    severity=Severity.HIGH,
+    title="Alt-Svc cache poisoning via unkeyed header",
+    description=(
+        "An unkeyed request header is reflected into the cached Alt-Svc response "
+        "header. This allows an attacker to poison the cache with an attacker-"
+        "controlled HTTP/3 endpoint, pinning every subsequent victim browser to "
+        "the attacker's QUIC server for the Alt-Svc TTL. The attack exploits the "
+        "HTTP/2-to-HTTP/3 protocol upgrade to redirect clients transparently."
+    ),
+    current_value=None,
+    recommendation=(
+        "Add the reflected header to the cache key, or strip it at the CDN/proxy "
+        "layer. Consider shortening Alt-Svc max-age for defense-in-depth."
+    ),
+    example_value="Vary: X-Forwarded-Host",
+    reference_url=_REF_URL,
+    compliance_mappings=[_OWASP_A05, _PCI_6_2],
+    cve_correlations=[_CWE_444],
+)
+
+_WCP_SET_COOKIE_POISONING = Finding(
+    header="Set-Cookie",
+    category=HeaderCategory.CACHING,
+    severity=Severity.HIGH,
+    title="Set-Cookie cache poisoning via unkeyed header",
+    description=(
+        "An unkeyed request header is reflected into the cached Set-Cookie "
+        "response header. A cached Set-Cookie from a poisoned response is "
+        "delivered to every subsequent user, enabling session fixation or "
+        "cookie injection attacks."
+    ),
+    current_value=None,
+    recommendation=(
+        "Responses that set cookies must be keyed by whatever influences the "
+        "cookie value, or cached as private. Strip reflected headers at the "
+        "CDN/proxy layer."
+    ),
+    example_value="Cache-Control: private, no-store",
+    reference_url=_REF_URL,
+    compliance_mappings=[_OWASP_A05, _PCI_6_2],
+    cve_correlations=[_CWE_444],
+)
+
+_WCP_CACHE_KEYING_UNDETERMINED = Finding(
+    header="Cache-Control",
+    category=HeaderCategory.CACHING,
+    severity=Severity.INFO,
+    title="Cache keying could not be determined",
+    description=(
+        "The scanner could not conclusively determine whether the query string "
+        "is part of the cache key. This occurs when the CDN does not expose "
+        "cache status headers on the first request and does not provide a "
+        "cache-key inspection mechanism. Active probing was skipped to avoid "
+        "inadvertently poisoning the live cache."
+    ),
+    current_value=None,
+    recommendation="Manually verify whether the query string is part of the cache key.",
+    example_value="N/A",
+    reference_url=_REF_URL,
+)
+
 _WCP_UNKEYED_HEADER_NO_REFLECT = Finding(
     header="X-Forwarded-Host",
     category=HeaderCategory.CACHING,
@@ -274,6 +338,7 @@ ALL_CACHE_FINDINGS: dict[str, Finding] = {
     "WCP_NO_VARY_ORIGIN": _WCP_NO_VARY_ORIGIN,
     "WCP_CACHE_PUBLIC_SENSITIVE": _WCP_CACHE_PUBLIC_SENSITIVE,
     "WCP_NO_CACHE_KEY_QS": _WCP_NO_CACHE_KEY_QS,
+    "WCP_CACHE_KEYING_UNDETERMINED": _WCP_CACHE_KEYING_UNDETERMINED,
     # Active - reflection
     "WCP_UNKEYED_HEADER_CRITICAL": _WCP_UNKEYED_HEADER_CRITICAL,
     "WCP_UNKEYED_HEADER_HIGH": _WCP_UNKEYED_HEADER_HIGH,
@@ -282,6 +347,8 @@ ALL_CACHE_FINDINGS: dict[str, Finding] = {
     "WCP_LIVE_CACHE_POISONED": _WCP_LIVE_CACHE_POISONED,
     "WCP_UNKEYED_HEADER_NO_REFLECT": _WCP_UNKEYED_HEADER_NO_REFLECT,
     "WCP_PROBE_SKIPPED": _WCP_PROBE_SKIPPED,
+    "WCP_ALT_SVC_POISONING": _WCP_ALT_SVC_POISONING,
+    "WCP_SET_COOKIE_POISONING": _WCP_SET_COOKIE_POISONING,
     # Active - CPDoS
     "WCP_CPDOS_OVERSIZE": _WCP_CPDOS_OVERSIZE,
     "WCP_CPDOS_MALFORMED": _WCP_CPDOS_MALFORMED,
