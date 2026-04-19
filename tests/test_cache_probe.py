@@ -174,3 +174,11 @@ class TestCPDoSOversize:
 
         result = asyncio.run(probe_cpdos_oversize(client, oracle))
         assert result.confirmed_unkeyed is False
+
+
+class TestContextToFinding:
+    def test_alt_svc_maps_to_alt_svc_poisoning(self):
+        from corsair.cache.probe import CONTEXT_TO_SEVERITY
+        severity, finding_id = CONTEXT_TO_SEVERITY["alt_svc_header"]
+        assert severity == "HIGH"
+        assert finding_id == "WCP_ALT_SVC_POISONING"
