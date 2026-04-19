@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from corsair.cache.oracle import (
     CacheStatus,
+    _akamai_qs_in_key,
     establish_oracle,
     fingerprint_cdn,
     make_buster,
@@ -141,6 +142,30 @@ class TestIsCachedAgeFallback:
         oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
         assert oracle.is_cached is False
         assert oracle.age_increments is False
+
+
+class TestAkamaiCacheKeyParser:
+    def test_empty_returns_none(self):
+        assert _akamai_qs_in_key("") is None
+
+    def test_none_returns_none(self):
+        assert _akamai_qs_in_key(None) is None
+
+    def test_with_query_string_returns_true(self):
+        key = "/L/3600/1234/example.com/page?id=1/_metadata"
+        assert _akamai_qs_in_key(key) is True
+
+    def test_without_query_string_returns_false(self):
+        key = "/L/3600/1234/example.com/page/_metadata"
+        assert _akamai_qs_in_key(key) is False
+
+    def test_question_mark_only_after_underscore_metadata_is_false(self):
+        key = "/L/3600/1234/example.com/page/_bucket?reserved=1"
+        assert _akamai_qs_in_key(key) is False
+
+    def test_question_mark_in_url_and_metadata_is_true(self):
+        key = "/L/3600/1234/example.com/page?id=1/_bucket?reserved=1"
+        assert _akamai_qs_in_key(key) is True
 
 
 class TestMakeBuster:

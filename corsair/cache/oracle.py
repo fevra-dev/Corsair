@@ -117,6 +117,20 @@ def make_buster() -> str:
     return uuid.uuid4().hex[:16]
 
 
+def _akamai_qs_in_key(cache_key: Optional[str]) -> Optional[bool]:
+    """Return whether an Akamai X-Cache-Key encodes the query string.
+
+    Akamai format: '/L/TTL/RULE/hostname/path?qs/_metadata'
+    A '?' before the '/_' trailer means the query string is part of the key.
+    Returns None when the input is empty or None (caller treats this as
+    undetermined).
+    """
+    if not cache_key:
+        return None
+    url_part = cache_key.split("/_", 1)[0]
+    return "?" in url_part
+
+
 def build_buster_params(oracle: CacheOracle, buster: str) -> dict[str, str]:
     if oracle.buster_strategy == "query_param":
         return {oracle.buster_param: buster}
