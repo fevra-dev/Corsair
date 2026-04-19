@@ -182,3 +182,9 @@ class TestContextToFinding:
         severity, finding_id = CONTEXT_TO_SEVERITY["alt_svc_header"]
         assert severity == "HIGH"
         assert finding_id == "WCP_ALT_SVC_POISONING"
+
+    def test_set_cookie_maps_to_set_cookie_poisoning(self):
+        from corsair.cache.probe import CONTEXT_TO_SEVERITY
+        severity, finding_id = CONTEXT_TO_SEVERITY["set_cookie_header"]
+        assert severity == "HIGH"
+        assert finding_id == "WCP_SET_COOKIE_POISONING"

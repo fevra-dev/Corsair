@@ -73,6 +73,7 @@ CONTEXT_TO_SEVERITY: dict[str, tuple[str, str]] = {
     "script_src": ("CRITICAL", "WCP_UNKEYED_HEADER_CRITICAL"),
     "csp_header": ("CRITICAL", "WCP_UNKEYED_HEADER_CRITICAL"),
     "alt_svc_header": ("HIGH", "WCP_ALT_SVC_POISONING"),
+    "set_cookie_header": ("HIGH", "WCP_SET_COOKIE_POISONING"),
     "location_header": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
     "link_href": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
     "link_header": ("HIGH", "WCP_UNKEYED_HEADER_HIGH"),
