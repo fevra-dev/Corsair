@@ -29,7 +29,7 @@ class CacheOracle:
     status_header: Optional[str] = None
     buster_strategy: str = "query_param"
     buster_param: str = "_cb"
-    query_string_keyed: bool = True
+    query_string_keyed: Optional[bool] = None
     age_increments: bool = False
     cache_control: Optional[str] = None
     vary_header: Optional[str] = None
@@ -213,5 +213,14 @@ async def establish_oracle(
     if s1 == CacheStatus.HIT:
         oracle.query_string_keyed = False
         _resolve_buster_from_vary(oracle)
+    elif s1 == CacheStatus.MISS and s2 == CacheStatus.HIT:
+        oracle.query_string_keyed = True
+    elif s2 == CacheStatus.HIT and oracle.akamai_cache_key:
+        akamai_keyed = _akamai_qs_in_key(oracle.akamai_cache_key)
+        if akamai_keyed is True:
+            oracle.query_string_keyed = True
+        elif akamai_keyed is False:
+            oracle.query_string_keyed = False
+            _resolve_buster_from_vary(oracle)
 
     return oracle

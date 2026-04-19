@@ -67,6 +67,9 @@ class CacheAuditor:
             if not oracle.is_cached:
                 return findings
 
+            if oracle.query_string_keyed is None:
+                return findings
+
             if oracle.buster_strategy == "none":
                 skipped = get_finding("WCP_PROBE_SKIPPED")
                 if skipped:
@@ -94,8 +97,12 @@ class CacheAuditor:
                 finding.current_value = oracle.cdn_fingerprint
                 findings.append(finding)
 
-        if not oracle.query_string_keyed:
+        if oracle.query_string_keyed is False:
             finding = get_finding("WCP_NO_CACHE_KEY_QS")
+            if finding:
+                findings.append(finding)
+        elif oracle.query_string_keyed is None:
+            finding = get_finding("WCP_CACHE_KEYING_UNDETERMINED")
             if finding:
                 findings.append(finding)
 

@@ -7,12 +7,18 @@ from corsair.cache.oracle import CacheOracle
 from corsair.models import Severity
 
 
-def _mock_oracle(is_cached=True, cdn="cloudflare", buster_strategy="query_param"):
+def _mock_oracle(
+    is_cached=True,
+    cdn="cloudflare",
+    buster_strategy="query_param",
+    query_string_keyed=True,
+):
     return CacheOracle(
         url="https://example.com",
         is_cached=is_cached,
         cdn_fingerprint=cdn,
         buster_strategy=buster_strategy,
+        query_string_keyed=query_string_keyed,
         cache_control="public, max-age=3600",
         vary_header="Accept-Encoding",
     )
@@ -105,3 +111,124 @@ class TestCacheAuditorActiveSkip:
                 findings = auditor.audit("https://example.com", {})
                 mock_probe.assert_not_called()
         assert any("skipped" in f.title.lower() for f in findings)
+
+
+class TestQueryStringKeyedEmission:
+    def test_emits_no_cache_key_qs_when_false(self):
+        auditor = CacheAuditor(active=False)
+        oracle = _mock_oracle(is_cached=True, query_string_keyed=False)
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            findings = auditor.audit("https://example.com", {})
+        assert any(
+            f.title == "Query string excluded from cache key" for f in findings
+        )
+        assert not any(
+            f.title == "Cache keying could not be determined" for f in findings
+        )
+
+    def test_emits_undetermined_when_none(self):
+        auditor = CacheAuditor(active=False)
+        oracle = _mock_oracle(is_cached=True, query_string_keyed=None)
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            findings = auditor.audit("https://example.com", {})
+        assert any(
+            f.title == "Cache keying could not be determined" for f in findings
+        )
+        assert not any(
+            f.title == "Query string excluded from cache key" for f in findings
+        )
+
+    def test_no_keying_finding_when_true(self):
+        auditor = CacheAuditor(active=False)
+        oracle = _mock_oracle(is_cached=True, query_string_keyed=True)
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            findings = auditor.audit("https://example.com", {})
+        assert not any(
+            f.title in (
+                "Query string excluded from cache key",
+                "Cache keying could not be determined",
+            )
+            for f in findings
+        )
+
+
+class TestActiveProbingSafetyGate:
+    def test_skipped_when_query_string_keyed_is_none(self):
+        auditor = CacheAuditor(active=True)
+        oracle = _mock_oracle(
+            is_cached=True,
+            buster_strategy="query_param",
+            query_string_keyed=None,
+        )
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            with patch("corsair.cache.auditor.probe_single_header") as mock_probe:
+                auditor.audit("https://example.com", {})
+                mock_probe.assert_not_called()
+
+    def test_runs_when_query_string_keyed_is_true(self):
+        auditor = CacheAuditor(active=True)
+        oracle = _mock_oracle(
+            is_cached=True,
+            buster_strategy="query_param",
+            query_string_keyed=True,
+        )
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            from corsair.cache.probe import CanaryResult
+            with patch(
+                "corsair.cache.auditor.probe_single_header",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ) as mock_probe, patch(
+                "corsair.cache.auditor.probe_cpdos_oversize",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_malformed",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_method_override",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ):
+                auditor.audit("https://example.com", {})
+                assert mock_probe.call_count >= 1
+
+    def test_runs_when_query_string_keyed_is_false_with_vary_buster(self):
+        auditor = CacheAuditor(active=True)
+        oracle = _mock_oracle(
+            is_cached=True,
+            buster_strategy="accept_language",
+            query_string_keyed=False,
+        )
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            from corsair.cache.probe import CanaryResult
+            with patch(
+                "corsair.cache.auditor.probe_single_header",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ) as mock_probe, patch(
+                "corsair.cache.auditor.probe_cpdos_oversize",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_malformed",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_method_override",
+                new=AsyncMock(return_value=CanaryResult(header_name="X", canary="")),
+            ):
+                auditor.audit("https://example.com", {})
+                assert mock_probe.call_count >= 1

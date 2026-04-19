@@ -27,6 +27,15 @@ def _mock_client_pair(r1_headers, r2_headers, r1_body="", r2_body=""):
     return client
 
 
+def _mock_client_triple(r1_headers, pragma_headers, r2_headers):
+    r1 = MagicMock(); r1.headers = r1_headers; r1.text = ""
+    rp = MagicMock(); rp.headers = pragma_headers; rp.text = ""
+    r2 = MagicMock(); r2.headers = r2_headers; r2.text = ""
+    client = MagicMock()
+    client.get = AsyncMock(side_effect=[r1, rp, r2])
+    return client
+
+
 class TestCDNFingerprinting:
     def test_cloudflare_via_cf_ray(self):
         headers = {"cf-ray": "abc123", "content-type": "text/html"}
@@ -197,6 +206,106 @@ class TestResolveBusterFromVary:
         oracle = CacheOracle(url="https://example.com", vary_header="User-Agent, Accept-Language")
         _resolve_buster_from_vary(oracle)
         assert oracle.buster_strategy == "accept_language"
+
+
+class TestQueryStringKeyedResolution:
+    def test_default_is_none(self):
+        oracle = CacheOracle(url="https://example.com")
+        assert oracle.query_string_keyed is None
+
+    def test_s1_miss_s2_hit_sets_true(self):
+        r1_headers = {"cf-cache-status": "MISS", "age": "0"}
+        r2_headers = {"cf-cache-status": "HIT", "age": "1"}
+        client = _mock_client_pair(r1_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.query_string_keyed is True
+        assert oracle.buster_strategy == "query_param"
+
+    def test_s1_hit_sets_false_and_vary_fallback(self):
+        r1_headers = {"cf-cache-status": "HIT", "vary": "Accept-Language", "age": "10"}
+        r2_headers = {"cf-cache-status": "HIT", "vary": "Accept-Language", "age": "20"}
+        client = _mock_client_pair(r1_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.query_string_keyed is False
+        assert oracle.buster_strategy == "accept_language"
+
+    def test_s1_unknown_s2_hit_non_akamai_stays_none(self):
+        r1_headers = {"content-type": "text/html", "age": "0"}
+        r2_headers = {"cf-cache-status": "HIT", "age": "1"}
+        client = _mock_client_pair(r1_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.query_string_keyed is None
+
+    def test_s2_miss_leaves_keyed_none(self):
+        r1_headers = {"cf-cache-status": "MISS"}
+        r2_headers = {"cf-cache-status": "MISS"}
+        client = _mock_client_pair(r1_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.query_string_keyed is None
+
+
+class TestAkamaiIntegratedDecisionTable:
+    def test_akamai_key_with_qs_confirms_true(self):
+        r1_headers = {"server": "AkamaiGHost", "x-cache": "TCP_MISS"}
+        pragma_headers = {
+            "x-check-cacheable": "YES",
+            "x-cache-key": "/L/3600/1234/example.com/page?id=1/_metadata",
+        }
+        r2_headers = {"x-check-cacheable": "YES", "x-cache": "TCP_HIT"}
+        client = _mock_client_triple(r1_headers, pragma_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.cdn_fingerprint == "akamai"
+        assert oracle.query_string_keyed is True
+        assert oracle.buster_strategy == "query_param"
+
+    def test_akamai_key_without_qs_confirms_false_with_vary_fallback(self):
+        r1_headers = {
+            "server": "AkamaiGHost",
+            "x-cache": "TCP_MISS",
+            "vary": "Accept-Language",
+        }
+        pragma_headers = {
+            "x-check-cacheable": "YES",
+            "x-cache-key": "/L/3600/1234/example.com/page/_metadata",
+        }
+        r2_headers = {
+            "x-check-cacheable": "YES",
+            "x-cache": "TCP_HIT",
+            "vary": "Accept-Language",
+        }
+        client = _mock_client_triple(r1_headers, pragma_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.query_string_keyed is False
+        assert oracle.buster_strategy == "accept_language"
+
+    def test_akamai_key_without_qs_no_vary_sets_buster_none(self):
+        r1_headers = {"server": "AkamaiGHost", "x-cache": "TCP_MISS"}
+        pragma_headers = {
+            "x-check-cacheable": "YES",
+            "x-cache-key": "/L/3600/1234/example.com/page/_metadata",
+        }
+        r2_headers = {"x-check-cacheable": "YES", "x-cache": "TCP_HIT"}
+        client = _mock_client_triple(r1_headers, pragma_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.query_string_keyed is False
+        assert oracle.buster_strategy == "none"
+
+    def test_akamai_pragma_probe_missing_key_leaves_none(self):
+        r1_headers = {"server": "AkamaiGHost", "x-cache": "TCP_MISS"}
+        pragma_headers = {"x-check-cacheable": "YES"}
+        r2_headers = {"x-check-cacheable": "YES", "x-cache": "TCP_HIT"}
+        client = _mock_client_triple(r1_headers, pragma_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.akamai_cache_key is None
+        assert oracle.query_string_keyed is None
 
 
 class TestMakeBuster:
