@@ -4,8 +4,10 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 from corsair.cache.oracle import (
+    CacheOracle,
     CacheStatus,
     _akamai_qs_in_key,
+    _resolve_buster_from_vary,
     establish_oracle,
     fingerprint_cdn,
     make_buster,
@@ -166,6 +168,35 @@ class TestAkamaiCacheKeyParser:
     def test_question_mark_in_url_and_metadata_is_true(self):
         key = "/L/3600/1234/example.com/page?id=1/_bucket?reserved=1"
         assert _akamai_qs_in_key(key) is True
+
+
+class TestResolveBusterFromVary:
+    def test_accept_language_in_vary(self):
+        oracle = CacheOracle(url="https://example.com", vary_header="Accept-Language, User-Agent")
+        _resolve_buster_from_vary(oracle)
+        assert oracle.buster_strategy == "accept_language"
+        assert oracle.buster_param == "Accept-Language"
+
+    def test_user_agent_in_vary(self):
+        oracle = CacheOracle(url="https://example.com", vary_header="User-Agent")
+        _resolve_buster_from_vary(oracle)
+        assert oracle.buster_strategy == "user_agent"
+        assert oracle.buster_param == "User-Agent"
+
+    def test_vary_missing_sets_none(self):
+        oracle = CacheOracle(url="https://example.com", vary_header=None)
+        _resolve_buster_from_vary(oracle)
+        assert oracle.buster_strategy == "none"
+
+    def test_vary_unhelpful_sets_none(self):
+        oracle = CacheOracle(url="https://example.com", vary_header="Accept-Encoding")
+        _resolve_buster_from_vary(oracle)
+        assert oracle.buster_strategy == "none"
+
+    def test_accept_language_precedes_user_agent(self):
+        oracle = CacheOracle(url="https://example.com", vary_header="User-Agent, Accept-Language")
+        _resolve_buster_from_vary(oracle)
+        assert oracle.buster_strategy == "accept_language"
 
 
 class TestMakeBuster:

@@ -131,6 +131,23 @@ def _akamai_qs_in_key(cache_key: Optional[str]) -> Optional[bool]:
     return "?" in url_part
 
 
+def _resolve_buster_from_vary(oracle: CacheOracle) -> None:
+    """Pick a buster strategy from Vary when QS is NOT part of the cache key.
+
+    Mutates oracle.buster_strategy and oracle.buster_param. Sets
+    buster_strategy to 'none' when Vary offers no useful header.
+    """
+    vary = (oracle.vary_header or "").lower()
+    if "accept-language" in vary:
+        oracle.buster_strategy = "accept_language"
+        oracle.buster_param = "Accept-Language"
+    elif "user-agent" in vary:
+        oracle.buster_strategy = "user_agent"
+        oracle.buster_param = "User-Agent"
+    else:
+        oracle.buster_strategy = "none"
+
+
 def build_buster_params(oracle: CacheOracle, buster: str) -> dict[str, str]:
     if oracle.buster_strategy == "query_param":
         return {oracle.buster_param: buster}
@@ -195,14 +212,6 @@ async def establish_oracle(
 
     if s1 == CacheStatus.HIT:
         oracle.query_string_keyed = False
-        vary = (oracle.vary_header or "").lower()
-        if "accept-language" in vary:
-            oracle.buster_strategy = "accept_language"
-            oracle.buster_param = "Accept-Language"
-        elif "user-agent" in vary:
-            oracle.buster_strategy = "user_agent"
-            oracle.buster_param = "User-Agent"
-        else:
-            oracle.buster_strategy = "none"
+        _resolve_buster_from_vary(oracle)
 
     return oracle
