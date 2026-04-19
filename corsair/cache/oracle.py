@@ -173,7 +173,11 @@ async def establish_oracle(
     r2_headers = {k.lower(): v for k, v in r2.headers.items()}
     s2 = read_cache_status(r2_headers, oracle.cdn_fingerprint)
 
-    oracle.is_cached = s2 == CacheStatus.HIT
+    age1 = int(r1_headers.get("age", "0") or 0)
+    age2 = int(r2_headers.get("age", "0") or 0)
+    oracle.age_increments = age2 > age1
+
+    oracle.is_cached = (s2 == CacheStatus.HIT) or oracle.age_increments
 
     if s1 == CacheStatus.HIT:
         oracle.query_string_keyed = False
@@ -186,9 +190,5 @@ async def establish_oracle(
             oracle.buster_param = "User-Agent"
         else:
             oracle.buster_strategy = "none"
-
-    age1 = int(r1_headers.get("age", "0") or 0)
-    age2 = int(r2_headers.get("age", "0") or 0)
-    oracle.age_increments = age2 > age1
 
     return oracle

@@ -1,11 +1,27 @@
 """Test cache oracle: CDN fingerprinting and cache status detection."""
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 from corsair.cache.oracle import (
     CacheStatus,
+    establish_oracle,
     fingerprint_cdn,
     make_buster,
     read_cache_status,
 )
+
+
+def _mock_client_pair(r1_headers, r2_headers, r1_body="", r2_body=""):
+    r1 = MagicMock()
+    r1.headers = r1_headers
+    r1.text = r1_body
+    r2 = MagicMock()
+    r2.headers = r2_headers
+    r2.text = r2_body
+    client = MagicMock()
+    client.get = AsyncMock(side_effect=[r1, r2])
+    return client
 
 
 class TestCDNFingerprinting:
@@ -102,6 +118,29 @@ class TestCacheStatusDetection:
     def test_no_cache_headers_is_unknown(self):
         headers = {"content-type": "text/html"}
         assert read_cache_status(headers, None) == CacheStatus.UNKNOWN
+
+
+class TestIsCachedAgeFallback:
+    def test_is_cached_via_age_increment_when_status_unknown(self):
+        # DYNAMIC status (not cached per header) but Age increments 3 → 7.
+        # Widening must trust age_increments as independent evidence of caching.
+        r1_headers = {"cf-cache-status": "DYNAMIC", "age": "3"}
+        r2_headers = {"cf-cache-status": "DYNAMIC", "age": "7"}
+        client = _mock_client_pair(r1_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.is_cached is True
+        assert oracle.age_increments is True
+
+    def test_is_cached_false_when_age_static_and_status_miss(self):
+        # Both MISS, age stable — widening must not flip False to True.
+        r1_headers = {"cf-cache-status": "MISS", "age": "10"}
+        r2_headers = {"cf-cache-status": "MISS", "age": "10"}
+        client = _mock_client_pair(r1_headers, r2_headers)
+
+        oracle = asyncio.run(establish_oracle(client, "https://example.com", timeout=5))
+        assert oracle.is_cached is False
+        assert oracle.age_increments is False
 
 
 class TestMakeBuster:
