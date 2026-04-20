@@ -28,9 +28,15 @@ def _mock_client_pair(r1_headers, r2_headers, r1_body="", r2_body=""):
 
 
 def _mock_client_triple(r1_headers, pragma_headers, r2_headers):
-    r1 = MagicMock(); r1.headers = r1_headers; r1.text = ""
-    rp = MagicMock(); rp.headers = pragma_headers; rp.text = ""
-    r2 = MagicMock(); r2.headers = r2_headers; r2.text = ""
+    r1 = MagicMock()
+    r1.headers = r1_headers
+    r1.text = ""
+    rp = MagicMock()
+    rp.headers = pragma_headers
+    rp.text = ""
+    r2 = MagicMock()
+    r2.headers = r2_headers
+    r2.text = ""
     client = MagicMock()
     client.get = AsyncMock(side_effect=[r1, rp, r2])
     return client

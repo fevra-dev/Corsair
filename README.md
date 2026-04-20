@@ -154,6 +154,22 @@ Active probing uses cache busters to isolate test requests and includes a safety
 | D | 60-69 | Poor |
 | F | 0-59 | Critical |
 
+## Changelog
+
+### v0.4.1 — Cache Module Hardening (2026-04-19)
+
+**Detection gaps closed:**
+- `WCP_ALT_SVC_POISONING` (HIGH): Alt-Svc cache poisoning via unkeyed header — HTTP/3 cross-protocol vector where attacker pins victim browsers to a malicious QUIC endpoint.
+- `WCP_SET_COOKIE_POISONING` (HIGH): Set-Cookie cache poisoning via unkeyed header — session fixation and cookie injection via cached response headers.
+
+**Correctness:**
+- `is_cached` now falls back to Age-increment evidence when cache-status headers are absent.
+- `query_string_keyed` is now conservative (`Optional[bool]`). Akamai `X-Cache-Key` is parsed as an authoritative signal for cache-key composition.
+- `WCP_CACHE_KEYING_UNDETERMINED` (INFO) fires when keying cannot be confirmed; active probing is skipped in that state to avoid inadvertent live-cache poisoning.
+
+**Spec compliance:**
+- Active probing is preemptively cancelled when live poisoning is confirmed (was: cooperative, allowed 4 in-flight probes to complete).
+
 ## Author
 
 **Fevra** - [GitHub](https://github.com/fevra-dev)

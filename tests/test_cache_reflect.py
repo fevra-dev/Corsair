@@ -70,9 +70,7 @@ class TestHeaderReflection:
         assert ctx == "script_src"
 
     def test_set_cookie_header(self):
-        resp = _mock_response(
-            headers={"Set-Cookie": "session=abc123; Path=/"}
-        )
+        resp = _mock_response(headers={"Set-Cookie": "session=abc123; Path=/"})
         found, ctx = detect_reflection(resp, "abc123")
         assert found is True
         assert ctx == "set_cookie_header"
