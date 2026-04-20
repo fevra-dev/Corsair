@@ -14,6 +14,8 @@ from typing import Optional
 
 import httpx
 
+from .. import __version__
+
 
 class CacheStatus(Enum):
     HIT = auto()
@@ -158,7 +160,7 @@ def build_buster_headers(oracle: CacheOracle, buster: str) -> dict[str, str]:
     if oracle.buster_strategy == "accept_language":
         return {"Accept-Language": f"en-{buster[:4]},en;q=0.9"}
     if oracle.buster_strategy == "user_agent":
-        return {"User-Agent": f"Corsair/0.2.0 ({buster})"}
+        return {"User-Agent": f"Corsair/{__version__} ({buster})"}
     return {}
 
 
