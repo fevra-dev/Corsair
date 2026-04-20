@@ -193,7 +193,7 @@ _CORS_PHASE_TIMEOUT = Finding(
         "re-running with a longer --timeout or scanning a more responsive endpoint."
     ),
     current_value=None,
-    recommendation="Re-scan with --timeout 30 if the target is known to be slow.",
+    recommendation="Re-scan with --timeout 120 if the target is known to be slow.",
     example_value="N/A",
     reference_url=_PORTSWIGGER_URL,
 )
