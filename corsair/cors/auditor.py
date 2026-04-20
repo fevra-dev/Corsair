@@ -18,5 +18,5 @@ class CORSAuditor:
         self.active = active
         self.evil_origin = evil_origin
 
-    def audit(self, url: str, headers: dict) -> List[Finding]:
+    def audit(self, url: str, headers: dict[str, str]) -> List[Finding]:
         return []

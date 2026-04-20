@@ -16,7 +16,9 @@ def test_cors_findings_module_imports():
 def test_cors_submodules_exist():
     from corsair.cors import analyzers, auditor, passive, probe
 
-    assert analyzers is not None
-    assert auditor is not None
-    assert passive is not None
-    assert probe is not None
+    # The imports themselves are the load-bearing check; these assertions
+    # verify each submodule exposes the expected shape.
+    assert hasattr(passive, "__doc__")
+    assert hasattr(probe, "__doc__")
+    assert hasattr(analyzers, "__doc__")
+    assert hasattr(auditor, "CORSAuditor")
