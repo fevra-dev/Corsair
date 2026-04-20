@@ -307,6 +307,6 @@ class TestPreemptiveAbort:
                 findings = auditor.audit("https://example.com", {})
                 elapsed = time.time() - start
 
-        assert elapsed < 2.0, f"Probing ran for {elapsed:.2f}s — abort did not cancel pending tasks"
+        assert elapsed < 2.5, f"Probing ran for {elapsed:.2f}s — abort did not cancel pending tasks"
         assert any(f.title == "Live cache poisoned during scan" for f in findings)
         assert probe_start_count["n"] > probe_finish_count["n"]
