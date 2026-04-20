@@ -132,7 +132,9 @@ class CacheAuditor:
 
         return findings
 
-    async def _active_probes(self, client: httpx.AsyncClient, oracle: CacheOracle) -> List[Finding]:
+    async def _active_probes(
+        self, client: httpx.AsyncClient, oracle: CacheOracle
+    ) -> List[Finding]:
         findings: List[Finding] = []
         abort_event = asyncio.Event()
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -161,17 +163,32 @@ class CacheAuditor:
                     abort_event=abort_event,
                 )
 
-        tasks = []
+        tasks: list[asyncio.Task] = []
         for header_name, value_template in PROBE_HEADERS:
-            tasks.append(limited_probe(header_name, value_template))
+            tasks.append(asyncio.create_task(limited_probe(header_name, value_template)))
+        tasks.append(asyncio.create_task(limited_cpdos(probe_cpdos_oversize)))
+        tasks.append(asyncio.create_task(limited_cpdos(probe_cpdos_malformed)))
+        tasks.append(asyncio.create_task(limited_cpdos(probe_cpdos_method_override)))
 
-        tasks.append(limited_cpdos(probe_cpdos_oversize))
-        tasks.append(limited_cpdos(probe_cpdos_malformed))
-        tasks.append(limited_cpdos(probe_cpdos_method_override))
+        async def abort_watcher():
+            await abort_event.wait()
+            for t in tasks:
+                if not t.done():
+                    t.cancel()
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        watcher = asyncio.create_task(abort_watcher())
+        try:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+        finally:
+            watcher.cancel()
+            try:
+                await watcher
+            except (asyncio.CancelledError, Exception):
+                pass
 
         for r in results:
+            if isinstance(r, asyncio.CancelledError):
+                continue
             if isinstance(r, Exception):
                 logger.warning(f"Probe failed: {r}")
                 continue

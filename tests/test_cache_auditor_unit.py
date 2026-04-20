@@ -1,9 +1,12 @@
 """Test CacheAuditor orchestration logic."""
 
+import asyncio
+import time
 from unittest.mock import AsyncMock, patch
 
 from corsair.cache.auditor import CacheAuditor
 from corsair.cache.oracle import CacheOracle
+from corsair.cache.probe import CanaryResult
 from corsair.models import Severity
 
 
@@ -232,3 +235,78 @@ class TestActiveProbingSafetyGate:
             ):
                 auditor.audit("https://example.com", {})
                 assert mock_probe.call_count >= 1
+
+
+class TestPreemptiveAbort:
+    def test_abort_event_cancels_pending_probes(self):
+        auditor = CacheAuditor(active=True, max_concurrency=2, timeout=5)
+        oracle = _mock_oracle(
+            is_cached=True,
+            buster_strategy="query_param",
+            query_string_keyed=True,
+        )
+
+        probe_start_count = {"n": 0}
+        probe_finish_count = {"n": 0}
+
+        async def fast_poisoning_probe(*args, **kwargs):
+            abort_event = kwargs.get("abort_event")
+            probe_start_count["n"] += 1
+            # Yield so other probes can acquire the semaphore and get in-flight
+            # BEFORE we set abort_event. Without this yield, every task after
+            # the first short-circuits via the cooperative abort check and the
+            # cancellation path is never exercised.
+            await asyncio.sleep(0.05)
+            if abort_event is not None:
+                abort_event.set()
+            probe_finish_count["n"] += 1
+            return CanaryResult(
+                header_name=args[2] if len(args) > 2 else "X-Forwarded-Host",
+                canary="",
+                confirmed_unkeyed=True,
+                severity="CRITICAL",
+                finding_id="WCP_LIVE_CACHE_POISONED",
+                detail="Simulated live poisoning",
+            )
+
+        async def slow_probe(*args, **kwargs):
+            probe_start_count["n"] += 1
+            try:
+                await asyncio.sleep(3.0)
+            except asyncio.CancelledError:
+                raise
+            probe_finish_count["n"] += 1
+            return CanaryResult(header_name="X", canary="")
+
+        call_order = {"n": 0}
+
+        async def dispatch(*args, **kwargs):
+            call_order["n"] += 1
+            if call_order["n"] == 1:
+                return await fast_poisoning_probe(*args, **kwargs)
+            return await slow_probe(*args, **kwargs)
+
+        with patch(
+            "corsair.cache.auditor.establish_oracle",
+            new=AsyncMock(return_value=oracle),
+        ):
+            with patch(
+                "corsair.cache.auditor.probe_single_header",
+                new=AsyncMock(side_effect=dispatch),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_oversize",
+                new=AsyncMock(side_effect=slow_probe),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_malformed",
+                new=AsyncMock(side_effect=slow_probe),
+            ), patch(
+                "corsair.cache.auditor.probe_cpdos_method_override",
+                new=AsyncMock(side_effect=slow_probe),
+            ):
+                start = time.time()
+                findings = auditor.audit("https://example.com", {})
+                elapsed = time.time() - start
+
+        assert elapsed < 2.0, f"Probing ran for {elapsed:.2f}s — abort did not cancel pending tasks"
+        assert any(f.title == "Live cache poisoned during scan" for f in findings)
+        assert probe_start_count["n"] > probe_finish_count["n"]
