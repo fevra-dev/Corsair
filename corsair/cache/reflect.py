@@ -24,7 +24,8 @@ HEADER_CONTEXTS: list[tuple[str, str]] = [
     ("location", "location_header"),
     ("access-control-allow-origin", "cors_header"),
     ("link", "link_header"),
-    ("set-cookie", "other_header"),
+    ("alt-svc", "alt_svc_header"),
+    ("set-cookie", "set_cookie_header"),
 ]
 
 BODY_CONTEXTS: list[tuple[re.Pattern, str]] = [
@@ -39,6 +40,8 @@ BODY_CONTEXTS: list[tuple[re.Pattern, str]] = [
 CONTEXT_SEVERITY_ORDER: list[str] = [
     "script_src",
     "csp_header",
+    "alt_svc_header",
+    "set_cookie_header",
     "location_header",
     "link_href",
     "link_header",

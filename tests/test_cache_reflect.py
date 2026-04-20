@@ -41,6 +41,60 @@ class TestHeaderReflection:
         assert found is False
         assert ctx is None
 
+    def test_alt_svc_header(self):
+        resp = _mock_response(
+            headers={"Alt-Svc": 'h3="abc123.corsair-canary.invalid:443"; ma=86400'}
+        )
+        found, ctx = detect_reflection(resp, "abc123")
+        assert found is True
+        assert ctx == "alt_svc_header"
+
+    def test_alt_svc_wins_over_cors(self):
+        resp = _mock_response(
+            headers={
+                "Alt-Svc": 'h3="abc123.corsair-canary.invalid:443"',
+                "Access-Control-Allow-Origin": "https://abc123.corsair-canary.invalid",
+            }
+        )
+        found, ctx = detect_reflection(resp, "abc123")
+        assert found is True
+        assert ctx == "alt_svc_header"
+
+    def test_script_src_wins_over_alt_svc(self):
+        resp = _mock_response(
+            body='<script src="https://abc123.corsair-canary.invalid/x.js"></script>',
+            headers={"Alt-Svc": 'h3="abc123.corsair-canary.invalid:443"'},
+        )
+        found, ctx = detect_reflection(resp, "abc123")
+        assert found is True
+        assert ctx == "script_src"
+
+    def test_set_cookie_header(self):
+        resp = _mock_response(headers={"Set-Cookie": "session=abc123; Path=/"})
+        found, ctx = detect_reflection(resp, "abc123")
+        assert found is True
+        assert ctx == "set_cookie_header"
+
+    def test_set_cookie_wins_over_cors(self):
+        resp = _mock_response(
+            headers={
+                "Set-Cookie": "session=abc123; Path=/",
+                "Access-Control-Allow-Origin": "https://abc123.corsair-canary.invalid",
+            }
+        )
+        found, ctx = detect_reflection(resp, "abc123")
+        assert found is True
+        assert ctx == "set_cookie_header"
+
+    def test_set_cookie_and_body_text(self):
+        resp = _mock_response(
+            body="<p>hello abc123</p>",
+            headers={"Set-Cookie": "tracker=abc123"},
+        )
+        found, ctx = detect_reflection(resp, "abc123")
+        assert found is True
+        assert ctx == "set_cookie_header"
+
 
 class TestBodyReflection:
     def test_script_src(self):

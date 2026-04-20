@@ -24,7 +24,7 @@ class TestCacheFindingDefinitions:
             assert finding.severity in Severity, f"{finding_id} has invalid severity"
 
     def test_finding_count(self):
-        assert len(ALL_CACHE_FINDINGS) == 16
+        assert len(ALL_CACHE_FINDINGS) == 19
 
     def test_no_duplicate_ids(self):
         ids = list(ALL_CACHE_FINDINGS.keys())
@@ -87,3 +87,23 @@ class TestCacheFindingDefinitions:
         for fid in ["WCP_NO_VARY_ORIGIN", "WCP_UNKEYED_HEADER_CRITICAL", "WCP_CPDOS_OVERSIZE"]:
             finding = ALL_CACHE_FINDINGS[fid]
             assert len(finding.compliance_mappings) > 0, f"{fid} missing compliance mappings"
+
+    def test_alt_svc_poisoning_finding_exists(self):
+        f = get_finding("WCP_ALT_SVC_POISONING")
+        assert f is not None
+        assert f.severity == Severity.HIGH
+        assert f.header == "Alt-Svc"
+        assert "HTTP/3" in f.description or "QUIC" in f.description
+
+    def test_set_cookie_poisoning_finding_exists(self):
+        f = get_finding("WCP_SET_COOKIE_POISONING")
+        assert f is not None
+        assert f.severity == Severity.HIGH
+        assert f.header == "Set-Cookie"
+        assert "session" in f.description.lower() or "fixation" in f.description.lower()
+
+    def test_cache_keying_undetermined_finding_exists(self):
+        f = get_finding("WCP_CACHE_KEYING_UNDETERMINED")
+        assert f is not None
+        assert f.severity == Severity.INFO
+        assert "manual" in f.recommendation.lower()
