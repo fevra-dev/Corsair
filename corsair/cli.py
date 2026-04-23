@@ -170,6 +170,12 @@ def cli(ctx, version):
 @click.option("--fingerprint/--no-fingerprint", default=True, help="Run fingerprinting")
 @click.option("--correlate-cve/--no-correlate-cve", default=True, help="Correlate with CVEs")
 @click.option("--cache-probe/--no-cache-probe", default=True, help="Run cache poisoning detection")
+@click.option("--cors-probe/--no-cors-probe", default=True, help="Run CORS DAST probing")
+@click.option(
+    "--cors-evil-origin",
+    default="https://evil.example",
+    help="Origin value used to probe for arbitrary-origin reflection",
+)
 def scan(
     targets: tuple,
     file: Optional[str],
@@ -188,6 +194,8 @@ def scan(
     fingerprint: bool,
     correlate_cve: bool,
     cache_probe: bool,
+    cors_probe: bool,
+    cors_evil_origin: str,
 ) -> None:
     """Scan HTTP security headers for target URLs.
 
@@ -229,6 +237,8 @@ def scan(
         max_redirects=max_redirects,
         user_agent=user_agent,
         cache_probe=cache_probe,
+        cors_probe=cors_probe,
+        cors_evil_origin=cors_evil_origin,
     )
 
     # Run scan

@@ -16,6 +16,7 @@ from .tls import tls_available
 from .tls.auditor import TLSAuditor
 from .tls.findings import get_finding as get_tls_finding
 from .cache.auditor import CacheAuditor
+from .cors.auditor import CORSAuditor
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ class HeadScanner:
         max_redirects: int = 5,
         user_agent: str = "HeadScan/1.0 (Security Header Analyzer)",
         cache_probe: bool = True,
+        cors_probe: bool = True,
+        cors_evil_origin: str = "https://evil.example",
     ):
         """
         Initialize scanner.
@@ -40,12 +43,16 @@ class HeadScanner:
             max_redirects: Maximum redirects to follow
             user_agent: User-Agent header value
             cache_probe: Whether to run active cache poisoning probes
+            cors_probe: Whether to run active CORS reflection probes
+            cors_evil_origin: Origin value used by the attacker-origin probe
         """
         self.timeout = timeout
         self.follow_redirects = follow_redirects
         self.max_redirects = max_redirects
         self.user_agent = user_agent
         self.cache_probe = cache_probe
+        self.cors_probe = cors_probe
+        self.cors_evil_origin = cors_evil_origin
 
         logger.info(
             f"Scanner initialized: timeout={timeout}s, " f"follow_redirects={follow_redirects}"
@@ -173,6 +180,20 @@ class HeadScanner:
             findings.extend(cache_findings)
         except Exception as e:
             logger.error(f"Cache audit failed: {e}")
+
+        # CORS DAST audit — supersedes the legacy passive CORSAnalyzer, so
+        # drop its output before the auditor appends fresh CORS findings.
+        findings = [f for f in findings if f.category.value != "cors"]
+        try:
+            cors_auditor = CORSAuditor(
+                timeout=self.timeout,
+                active=self.cors_probe,
+                evil_origin=self.cors_evil_origin,
+            )
+            cors_findings = cors_auditor.audit(final_url, headers)
+            findings.extend(cors_findings)
+        except Exception as e:
+            logger.error(f"CORS audit failed: {e}")
 
         # Calculate score
         score = calculate_score(findings)

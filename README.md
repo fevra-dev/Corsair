@@ -156,6 +156,33 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.5.0 — CORS DAST Wave 1 (2026-04-23)
+
+**New `corsair/cors/` package** — actively probes CORS misconfigurations by sending Origin-varied GETs and analyzing ACAO/ACAC reflection. Ships 5 Core finding classes:
+
+- `CORS_ARBITRARY_ORIGIN_CRED` (CRITICAL) — arbitrary origin reflected with credentials.
+- `CORS_ARBITRARY_ORIGIN` (HIGH) — arbitrary origin reflected without credentials.
+- `CORS_NULL_ORIGIN_CRED` (HIGH) — `Origin: null` trusted with credentials.
+- `CORS_NULL_ORIGIN` (MEDIUM) — `Origin: null` trusted without credentials.
+- `CORS_WILDCARD_CRED` (MEDIUM) — ACAO `*` alongside `Access-Control-Allow-Credentials: true`.
+
+**Signal-driven severity heuristic** — CRITICAL/HIGH findings on the arbitrary-origin class downgrade one step when no sensitivity signal (Set-Cookie, Authorization request header, JSON response, or login redirect) is observed.
+
+**CLI flags**
+- `--cors-probe / --no-cors-probe` (default on)
+- `--cors-evil-origin URL` (default `https://evil.example`)
+
+**Safety**
+- Preemptive abort on confirmed CRITICAL — same pattern as cache v0.4.1.
+- No state-changing probes, no credentialed probes, no traffic to internal networks.
+
+**Refactor** — static CORS analyzer migrated into `corsair/cors/passive.py` as a pure function. `corsair/analyzers/cors.py` is now a thin adapter so the analyzer registry keeps working; `CORSAuditor` is the source of truth for CORS findings and duplicates from the legacy path are stripped during `scan_target()`.
+
+**Deferred to later waves**
+- Subdomain/regex bypass matrix, protocol downgrade, internal-network origin probes (v0.5.1 — Wave 2).
+- Preflight divergence and CDN cache-key divergence probes (v0.5.2 — Wave 3).
+- State-changing probes, framework-default heuristic, third-party XSS correlation (v0.5.3 — Wave 4).
+
 ### v0.4.1 — Cache Module Hardening (2026-04-19)
 
 **Detection gaps closed:**

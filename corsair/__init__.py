@@ -24,7 +24,7 @@ GitHub: https://github.com/fevra-dev/Corsair
 License: MIT
 """
 
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 __author__ = "Fevra"
 __license__ = "MIT"
 __app_name__ = "Corsair"
