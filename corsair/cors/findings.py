@@ -160,6 +160,87 @@ _CORS_WILDCARD_CRED = Finding(
 )
 
 
+# -- Wave 2: bypass matrix ---------------------------------------------------
+
+_CORS_SUBDOMAIN_BYPASS = Finding(
+    header="Access-Control-Allow-Origin",
+    category=HeaderCategory.CORS,
+    severity=Severity.HIGH,
+    title="Subdomain or regex bypass reflected",
+    description=(
+        "The server reflected an Origin crafted to bypass a naive "
+        "subdomain or regex allowlist (e.g. 'evil.target.com', "
+        "'target.com.evil.com', or a dot-confusion payload). This "
+        "indicates the allowlist matcher is too permissive — typically "
+        "a substring check, a .startswith() / .endswith() test, or an "
+        "unescaped regex. Attackers who can register a matching domain "
+        "gain cross-origin read access to this endpoint."
+    ),
+    current_value=None,
+    recommendation=(
+        "Validate Origin with exact-string comparison against a strict "
+        "allowlist. If a regex is required, escape dots ('\\.'), anchor "
+        "with ^ and $, and never use substring / prefix / suffix matching."
+    ),
+    example_value="Access-Control-Allow-Origin: https://trusted.example.com",
+    reference_url=_PORTSWIGGER_URL,
+    compliance_mappings=[_OWASP_A01, _OWASP_A05],
+    cve_correlations=[_CWE_346, _CWE_942],
+)
+
+_CORS_PROTOCOL_DOWNGRADE = Finding(
+    header="Access-Control-Allow-Origin",
+    category=HeaderCategory.CORS,
+    severity=Severity.HIGH,
+    title="HTTP origin trusted on HTTPS target",
+    description=(
+        "The HTTPS endpoint reflects an Origin of 'http://{host}' — the "
+        "same hostname over plaintext. An attacker on the network path "
+        "(open Wi-Fi, compromised router, ISP-level MITM) can host a "
+        "page at http://{host}, load the HTTPS endpoint cross-origin, "
+        "and exfiltrate the response. The HTTPS protection on the "
+        "target is negated whenever the browser happens to resolve the "
+        "hostname to an attacker-served http:// page."
+    ),
+    current_value=None,
+    recommendation=(
+        "Reject Origin values whose scheme does not match the target's "
+        "scheme. On HTTPS endpoints the allowlist should contain only "
+        "https:// origins."
+    ),
+    example_value="Access-Control-Allow-Origin: https://trusted.example.com",
+    reference_url=_PORTSWIGGER_URL,
+    compliance_mappings=[_OWASP_A01, _OWASP_A05, _PCI_6_2],
+    cve_correlations=[_CWE_346],
+)
+
+_CORS_INTERNAL_ORIGIN = Finding(
+    header="Access-Control-Allow-Origin",
+    category=HeaderCategory.CORS,
+    severity=Severity.HIGH,
+    title="Internal or private-network origin trusted",
+    description=(
+        "The server reflects an Origin pointing at a private-network "
+        "address (127.0.0.1, localhost, 10.0.0.0/8, 192.168.0.0/16). "
+        "This typically means a development-time CORS config shipped "
+        "to production. An attacker can trick a developer on the "
+        "internal network into loading an attacker page that pivots "
+        "through the browser to read internal responses; it also "
+        "signals weak Origin validation overall."
+    ),
+    current_value=None,
+    recommendation=(
+        "Remove all internal-network origins from the production CORS "
+        "allowlist. Keep a separate dev config if localhost access is "
+        "needed during development."
+    ),
+    example_value="Access-Control-Allow-Origin: https://trusted.example.com",
+    reference_url=_PORTSWIGGER_URL,
+    compliance_mappings=[_OWASP_A01, _OWASP_A05],
+    cve_correlations=[_CWE_346],
+)
+
+
 # -- Meta findings ----------------------------------------------------------
 
 _CORS_PROBE_INCONCLUSIVE = Finding(
@@ -207,6 +288,9 @@ ALL_CORS_FINDINGS: dict[str, Finding] = {
     "CORS_NULL_ORIGIN_CRED": _CORS_NULL_ORIGIN_CRED,
     "CORS_NULL_ORIGIN": _CORS_NULL_ORIGIN,
     "CORS_WILDCARD_CRED": _CORS_WILDCARD_CRED,
+    "CORS_SUBDOMAIN_BYPASS": _CORS_SUBDOMAIN_BYPASS,
+    "CORS_PROTOCOL_DOWNGRADE": _CORS_PROTOCOL_DOWNGRADE,
+    "CORS_INTERNAL_ORIGIN": _CORS_INTERNAL_ORIGIN,
     "CORS_PROBE_INCONCLUSIVE": _CORS_PROBE_INCONCLUSIVE,
     "CORS_PHASE_TIMEOUT": _CORS_PHASE_TIMEOUT,
 }
