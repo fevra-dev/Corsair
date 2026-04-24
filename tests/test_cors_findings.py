@@ -5,9 +5,9 @@ from corsair.models import HeaderCategory, Severity
 
 
 class TestCORSFindingRegistry:
-    def test_wave1_finding_count(self):
-        # Wave 1 ships 5 Core findings + 2 meta = 7 total.
-        assert len(ALL_CORS_FINDINGS) == 7
+    def test_registry_size(self):
+        # 5 Core + 2 Meta (Wave 1) + 3 Bypass (Wave 2) = 10.
+        assert len(ALL_CORS_FINDINGS) == 10
 
     def test_all_findings_use_cors_category(self):
         for fid, finding in ALL_CORS_FINDINGS.items():

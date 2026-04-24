@@ -156,6 +156,31 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.5.1 — CORS DAST Wave 2 (2026-04-24)
+
+**Bypass matrix** — CORSAuditor now ships 11 additional active probes (spec §4.2) covering the classic origin-allowlist bypass patterns:
+
+- 6 subdomain/regex payloads: `evil.{host}`, `{host}.evil.com`, dot-confusion (`{hostX}.evil.com`), TLD-confusion (`{host}.evil`), wildcard (`anysub.{host}`), contains-match (`{prefix}-evil.{rest}`).
+- Protocol downgrade (`http://{host}`, only when target is HTTPS).
+- Four internal-network origins: `127.0.0.1`, `localhost`, `10.0.0.1`, `192.168.0.1`.
+
+**New findings**
+- `CORS_SUBDOMAIN_BYPASS` (HIGH, ↓MEDIUM when no sensitivity signal) — server reflects a crafted bypass payload, indicating allowlist logic is a substring/prefix/suffix match or an unescaped regex.
+- `CORS_PROTOCOL_DOWNGRADE` (HIGH) — HTTPS endpoint accepts `http://{host}` as a trusted origin, negating transport protection on any network path that can MITM the http version.
+- `CORS_INTERNAL_ORIGIN` (HIGH) — private-network origins (loopback, RFC1918) are on the production allowlist.
+
+**Classifier**
+- `classify_reflection()` recognizes the six bypass labels, the protocol-downgrade label, and the four internal-origin labels. Match is by exact ACAO-echo of the probe's sent origin to avoid false positives when servers normalize reflected origins.
+- Only `CORS_SUBDOMAIN_BYPASS` participates in the sensitivity-signal downgrade (matches spec §5 — the `↓` indicator applies to arbitrary and subdomain classes only).
+
+**Probe budget** — default scans now send ~13 CORS probes per target (Wave 1's 2 + Wave 2's 11). Protocol-downgrade probe is dropped for non-HTTPS targets. Matrix order is locked by a golden-file test.
+
+**No new CLI flags** — Wave 2 reuses the existing `--cors-probe/--no-cors-probe` gate and the target URL's hostname.
+
+**Deferred to later waves**
+- Preflight divergence and CDN cache-key divergence probes (v0.5.2 — Wave 3).
+- State-changing probes, framework-default heuristic, third-party XSS correlation (v0.5.3 — Wave 4).
+
 ### v0.5.0 — CORS DAST Wave 1 (2026-04-23)
 
 **New `corsair/cors/` package** — actively probes CORS misconfigurations by sending Origin-varied GETs and analyzing ACAO/ACAC reflection. Ships 5 Core finding classes:

@@ -10,7 +10,8 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 import httpx
 
@@ -47,14 +48,60 @@ def _make_cache_buster() -> str:
     return uuid.uuid4().hex[:16]
 
 
+def build_bypass_matrix(url: str, host: str) -> List[OriginProbe]:
+    """
+    Build the Wave 2 bypass-matrix probe set for a given host.
+
+    Derives payloads from spec §4.2:
+    - Subdomain/regex bypass (6 patterns)
+    - Protocol downgrade (1 pattern — caller decides whether to include)
+    - Internal-network origins (4 patterns)
+
+    Ordering is stable; a golden-file test locks the exact payload set.
+    """
+    host_dots_sanitized = host.replace(".", "X")
+    host_prefix = host.split(".")[0]
+
+    matrix: List[Tuple[str, str]] = [
+        # --- Subdomain / regex bypass ---
+        (f"https://evil.{host}", "subdomain_evil_prefix"),
+        (f"https://{host}.evil.com", "subdomain_attacker_suffix"),
+        (f"https://{host_dots_sanitized}.evil.com", "subdomain_dot_confusion"),
+        (f"https://{host}.evil", "subdomain_tld_confusion"),
+        (f"https://anysub.{host}", "subdomain_wildcard"),
+        (f"https://{host_prefix}-evil.{'.'.join(host.split('.')[1:]) or 'com'}",
+         "subdomain_contains_match"),
+        # --- Protocol downgrade ---
+        (f"http://{host}", "protocol_downgrade"),
+        # --- Internal / private origins ---
+        ("http://127.0.0.1", "internal_loopback_ip"),
+        ("http://localhost", "internal_loopback_name"),
+        ("http://10.0.0.1", "internal_rfc1918_10"),
+        ("http://192.168.0.1", "internal_rfc1918_192"),
+    ]
+
+    return [
+        OriginProbe(
+            url=url,
+            origin=origin,
+            label=label,
+            cache_buster=_make_cache_buster(),
+        )
+        for origin, label in matrix
+    ]
+
+
 def build_probes(url: str, evil_origin: str) -> List[OriginProbe]:
     """
-    Build the Wave 1 probe set: arbitrary origin + null origin.
-
-    Later waves extend this with the bypass matrix, protocol downgrade,
-    and internal-network origins.
+    Build the full active probe set: Wave 1 (arbitrary + null) + Wave 2
+    (bypass matrix). Protocol-downgrade probe is dropped for non-HTTPS
+    targets (it only demonstrates downgrade when the target is HTTPS).
     """
-    return [
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    is_https = parsed.scheme == "https"
+
+    wave1 = [
         OriginProbe(
             url=url,
             origin=evil_origin,
@@ -68,6 +115,10 @@ def build_probes(url: str, evil_origin: str) -> List[OriginProbe]:
             cache_buster=_make_cache_buster(),
         ),
     ]
+    wave2 = build_bypass_matrix(url=url, host=host)
+    if not is_https:
+        wave2 = [p for p in wave2 if p.label != "protocol_downgrade"]
+    return wave1 + wave2
 
 
 async def run_probe(

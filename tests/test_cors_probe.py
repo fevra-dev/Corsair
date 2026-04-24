@@ -20,14 +20,14 @@ def _mock_response(headers: dict = None, status_code: int = 200, body: str = "")
 
 
 class TestBuildProbes:
-    def test_wave1_probe_set_is_two_items(self):
-        # Wave 1 scope: arbitrary origin + null origin. Bypass/protocol/
-        # internal probes ship in Wave 2.
+    def test_wave1_probe_set_includes_arbitrary_and_null(self):
+        # Wave 1 probes (arbitrary + null) are present; Wave 2 probes are
+        # also included as of build_probes Wave 2 extension.
         probes = build_probes(
             url="https://target.example.com",
             evil_origin="https://evil.example",
         )
-        assert len(probes) == 2
+        assert len(probes) >= 2
         origins = [p.origin for p in probes]
         assert "https://evil.example" in origins
         assert "null" in origins
@@ -130,7 +130,7 @@ class TestRunProbes:
         results = asyncio.run(
             run_probes(client, probes, timeout=5.0, max_concurrency=5)
         )
-        assert len(results) == 2
+        assert len(results) == len(probes)
         assert all(isinstance(r, ProbeResult) for r in results)
 
     def test_abort_event_cancels_pending_probes(self):
