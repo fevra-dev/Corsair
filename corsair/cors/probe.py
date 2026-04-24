@@ -10,7 +10,8 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 import httpx
 
@@ -58,12 +59,10 @@ def build_bypass_matrix(url: str, host: str) -> List[OriginProbe]:
 
     Ordering is stable; a golden-file test locks the exact payload set.
     """
-    # Pre-split for the dot-confusion and TLD-confusion patterns.
-    host_no_tld = ".".join(host.split(".")[:-1]) if "." in host else host
     host_dots_sanitized = host.replace(".", "X")
     host_prefix = host.split(".")[0]
 
-    matrix: List[tuple[str, str]] = [
+    matrix: List[Tuple[str, str]] = [
         # --- Subdomain / regex bypass ---
         (f"https://evil.{host}", "subdomain_evil_prefix"),
         (f"https://{host}.evil.com", "subdomain_attacker_suffix"),
@@ -98,8 +97,6 @@ def build_probes(url: str, evil_origin: str) -> List[OriginProbe]:
     (bypass matrix). Protocol-downgrade probe is dropped for non-HTTPS
     targets (it only demonstrates downgrade when the target is HTTPS).
     """
-    from urllib.parse import urlparse
-
     parsed = urlparse(url)
     host = parsed.hostname or ""
     is_https = parsed.scheme == "https"
