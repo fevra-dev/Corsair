@@ -31,24 +31,46 @@ class ReflectionVerdict:
     downgraded: bool
 
 
-# Default severities for Core 5 reflection findings, matching spec §5.
+# Default severities per finding ID, matching spec §5.
 _DEFAULTS: Dict[str, Severity] = {
     "CORS_ARBITRARY_ORIGIN_CRED": Severity.CRITICAL,
     "CORS_ARBITRARY_ORIGIN": Severity.HIGH,
     "CORS_NULL_ORIGIN_CRED": Severity.HIGH,
     "CORS_NULL_ORIGIN": Severity.MEDIUM,
+    # Wave 2
+    "CORS_SUBDOMAIN_BYPASS": Severity.HIGH,
+    "CORS_PROTOCOL_DOWNGRADE": Severity.HIGH,
+    "CORS_INTERNAL_ORIGIN": Severity.HIGH,
 }
 
-# Downgrade map: CRITICAL→HIGH, HIGH→MEDIUM. NULL/NULL_CRED do not downgrade
-# (spec §5: only CORS_ARBITRARY_* are marked with the ↓ downgrade indicator).
+# Downgrade map: CRITICAL→HIGH, HIGH→MEDIUM. Spec §5 marks only
+# CORS_ARBITRARY_* and CORS_SUBDOMAIN_BYPASS with the ↓ indicator;
+# protocol_downgrade / internal_origin / null_* do NOT downgrade.
 _DOWNGRADE: Dict[str, Severity] = {
     "CORS_ARBITRARY_ORIGIN_CRED": Severity.HIGH,
     "CORS_ARBITRARY_ORIGIN": Severity.MEDIUM,
+    "CORS_SUBDOMAIN_BYPASS": Severity.MEDIUM,
 }
 
 _AUTH_GATE_STATUSES = {401, 403}
 _LOGIN_PATH_MARKERS = ("login", "signin", "auth", "sso")
 _JSON_CT_MARKERS = ("application/json", "+json")
+
+_SUBDOMAIN_BYPASS_LABELS = frozenset({
+    "subdomain_evil_prefix",
+    "subdomain_attacker_suffix",
+    "subdomain_dot_confusion",
+    "subdomain_tld_confusion",
+    "subdomain_wildcard",
+    "subdomain_contains_match",
+})
+
+_INTERNAL_ORIGIN_LABELS = frozenset({
+    "internal_loopback_ip",
+    "internal_loopback_name",
+    "internal_rfc1918_10",
+    "internal_rfc1918_192",
+})
 
 
 def classify_reflection(
@@ -57,7 +79,7 @@ def classify_reflection(
     request_headers: Optional[Dict[str, str]] = None,
 ) -> Optional[ReflectionVerdict]:
     """
-    Map a ProbeResult to a finding ID for Wave 1.
+    Map a ProbeResult to a finding ID (Waves 1-2).
 
     Returns None when:
     - Probe errored
@@ -88,6 +110,21 @@ def classify_reflection(
         )
     elif result.label == "null_origin" and acao_stripped.lower() == "null":
         finding_id = "CORS_NULL_ORIGIN_CRED" if acac_true else "CORS_NULL_ORIGIN"
+    elif (
+        result.label in _SUBDOMAIN_BYPASS_LABELS
+        and acao_stripped == result.origin_sent
+    ):
+        finding_id = "CORS_SUBDOMAIN_BYPASS"
+    elif (
+        result.label == "protocol_downgrade"
+        and acao_stripped == result.origin_sent
+    ):
+        finding_id = "CORS_PROTOCOL_DOWNGRADE"
+    elif (
+        result.label in _INTERNAL_ORIGIN_LABELS
+        and acao_stripped == result.origin_sent
+    ):
+        finding_id = "CORS_INTERNAL_ORIGIN"
 
     if finding_id is None:
         return None
