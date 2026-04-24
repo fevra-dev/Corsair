@@ -5,8 +5,8 @@ from corsair.models import HeaderCategory, Severity
 
 
 class TestCORSFindingRegistry:
-    def test_wave1_finding_count(self):
-        # Wave 1: 5 Core + 2 meta = 7. Wave 2 adds 3 bypass findings = 10 total.
+    def test_registry_size(self):
+        # 5 Core + 2 Meta (Wave 1) + 3 Bypass (Wave 2) = 10.
         assert len(ALL_CORS_FINDINGS) == 10
 
     def test_all_findings_use_cors_category(self):

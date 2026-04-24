@@ -1,16 +1,18 @@
 """
-CORS DAST finding definitions (Wave 1).
+CORS DAST finding definitions (Waves 1-2).
 
 Ships 5 Core finding classes covering the highest-impact CORS misconfigurations:
 - Arbitrary-origin reflection (±credentials)
 - Null-origin trust (±credentials)
 - Wildcard ACAO + credentials
 
+Wave 2 adds 3 bypass-matrix findings (subdomain/regex bypass, protocol
+downgrade, internal-network origin).
+
 Plus 2 meta findings for inconclusive runs and phase timeouts.
 
-Additional 11 findings (subdomain bypass, protocol downgrade, internal origin,
-preflight divergence, cache-key divergence, framework default, third-party XSS,
-broad methods/headers, post leak) ship in Waves 2-4.
+Additional 8 findings (preflight divergence, cache-key divergence, framework
+default, third-party XSS, broad methods/headers, post leak) ship in Waves 3-4.
 """
 
 import copy
