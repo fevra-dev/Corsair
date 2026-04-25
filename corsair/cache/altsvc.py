@@ -69,3 +69,22 @@ def parse_alt_svc(value: str) -> List[AltSvcEntry]:
             AltSvcEntry(protocol_id=protocol_id, host=host, port=port, ma=ma, persist=persist)
         )
     return entries
+
+
+def detect_alt_svc_canary(value: str, canary: str) -> bool:
+    """
+    Alt-authority-anchored canary detection.
+
+    Returns True only when the canary appears inside a quoted alt-authority value.
+    Returns False for "clear", empty, or canary-absent input.
+    """
+    if not value:
+        return False
+    stripped = value.strip()
+    if not stripped or stripped.lower() == "clear":
+        return False
+    pattern = re.compile(
+        r'=\s*"[^"]*' + re.escape(canary) + r'[^"]*"',
+        re.IGNORECASE,
+    )
+    return bool(pattern.search(value))

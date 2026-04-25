@@ -8,6 +8,8 @@ ranked by security impact. Returns the most severe context found.
 import re
 from typing import Optional
 
+from . import altsvc as _altsvc
+
 _SCRIPT_SRC = re.compile(r'<script[^>]+src=["\']([^"\']*)', re.I)
 _LINK_HREF = re.compile(r'<link[^>]+href=["\']([^"\']*)', re.I)
 _CANONICAL = re.compile(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']*)', re.I)
@@ -61,7 +63,13 @@ def detect_reflection(response, canary: str) -> tuple[bool, Optional[str]]:
     headers = response.headers or {}
     for header_name, context_id in HEADER_CONTEXTS:
         for key, value in headers.items():
-            if key.lower() == header_name and canary in value:
+            if key.lower() != header_name:
+                continue
+            if header_name == "alt-svc":
+                matched = _altsvc.detect_alt_svc_canary(value, canary)
+            else:
+                matched = canary in value
+            if matched:
                 found_contexts.append(context_id)
                 break
 
