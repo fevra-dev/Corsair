@@ -9,6 +9,11 @@ import re
 from dataclasses import dataclass
 from typing import List, Mapping, Optional
 
+import tldextract
+
+_RESERVED_PSEUDO_TLDS = (".local", ".internal", ".invalid", ".localhost", ".test", ".example")
+_THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60  # 2_592_000
+
 
 @dataclass(frozen=True)
 class AltSvcEntry:
@@ -88,3 +93,68 @@ def detect_alt_svc_canary(value: str, canary: str) -> bool:
         re.IGNORECASE,
     )
     return bool(pattern.search(value))
+
+
+def _is_private_host(host: str) -> bool:
+    """True if host is a private/loopback IP, reserved pseudo-TLD, or bare hostname."""
+    # IPv6 literals arrive in [bracketed] form from authority parsing.
+    candidate = host.strip("[]")
+    try:
+        ip = ipaddress.ip_address(candidate)
+        return ip.is_private or ip.is_loopback or ip.is_link_local
+    except ValueError:
+        pass
+
+    lowered = host.lower()
+    for suffix in _RESERVED_PSEUDO_TLDS:
+        if lowered.endswith(suffix):
+            return True
+
+    extracted = tldextract.extract(host)
+    if extracted.suffix == "":
+        return True
+    return False
+
+
+def analyze_alt_svc_suspicious(value: str, target_hostname: str) -> List[str]:
+    """
+    Run all three passive analyzers against an Alt-Svc value.
+
+    Returns a list of finding IDs (subset of WCP_ALT_SVC_CROSS_DOMAIN,
+    WCP_ALT_SVC_PRIVATE_HOST, WCP_ALT_SVC_EXCESSIVE_PERSISTENCE).
+    Each finding emits at most once even when multiple entries qualify.
+    """
+    findings: List[str] = []
+    entries = parse_alt_svc(value)
+    if not entries:
+        return findings
+
+    target_domain = tldextract.extract(target_hostname).registered_domain.lower()
+
+    cross_domain = False
+    private_host = False
+    excessive = False
+
+    for entry in entries:
+        if entry.host:
+            entry_domain = tldextract.extract(entry.host).registered_domain.lower()
+            if (
+                entry_domain
+                and target_domain
+                and entry_domain != target_domain
+                and entry.host.lower() != target_hostname.lower()
+            ):
+                cross_domain = True
+            if _is_private_host(entry.host):
+                private_host = True
+        if entry.ma is not None and entry.ma > _THIRTY_DAYS_SECONDS and entry.persist:
+            excessive = True
+
+    if cross_domain:
+        findings.append("WCP_ALT_SVC_CROSS_DOMAIN")
+    if private_host:
+        findings.append("WCP_ALT_SVC_PRIVATE_HOST")
+    if excessive:
+        findings.append("WCP_ALT_SVC_EXCESSIVE_PERSISTENCE")
+
+    return findings
