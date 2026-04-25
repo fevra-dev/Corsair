@@ -5,6 +5,7 @@ from corsair.cache.altsvc import (
     analyze_alt_svc_suspicious,
     detect_alt_svc_canary,
     parse_alt_svc,
+    should_probe_alt_svc,
 )
 
 
@@ -137,3 +138,22 @@ class TestExcessivePersistence:
     def test_persist_with_default_ma_no_emit(self):
         ids = analyze_alt_svc_suspicious('h3=":443"; persist=1', "api.example.com")
         assert "WCP_ALT_SVC_EXCESSIVE_PERSISTENCE" not in ids
+
+
+class TestShouldProbeAltSvc:
+    def test_cloudflare_returns_false(self):
+        assert should_probe_alt_svc("cloudflare", {"alt-svc": 'h3=":443"'}) is False
+
+    def test_fastly_returns_false(self):
+        assert should_probe_alt_svc("fastly", {}) is False
+
+    def test_akamai_with_h3_marker_returns_false(self):
+        assert should_probe_alt_svc("akamai", {"alt-svc": 'h3=":443"; ma=93600'}) is False
+
+    def test_akamai_without_h3_marker_returns_true(self):
+        assert should_probe_alt_svc("akamai", {"alt-svc": 'h3=":443"; ma=86400'}) is True
+
+    def test_unknown_or_none_returns_true(self):
+        assert should_probe_alt_svc(None, {}) is True
+        assert should_probe_alt_svc("nginx", {}) is True
+        assert should_probe_alt_svc("cloudfront", {}) is True

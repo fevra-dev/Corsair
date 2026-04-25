@@ -158,3 +158,27 @@ def analyze_alt_svc_suspicious(value: str, target_hostname: str) -> List[str]:
         findings.append("WCP_ALT_SVC_EXCESSIVE_PERSISTENCE")
 
     return findings
+
+
+def should_probe_alt_svc(
+    cdn_fingerprint: Optional[str],
+    baseline_headers: Mapping[str, str],
+) -> bool:
+    """
+    Decide whether the active Alt-Svc reflection probe is worth running.
+
+    Returns False on Cloudflare, Fastly, and Akamai-with-HTTP/3
+    (detected by ma=93600 in baseline). True for unknown / no CDN.
+    """
+    fp = (cdn_fingerprint or "").lower()
+    if fp in {"cloudflare", "fastly"}:
+        return False
+    if fp == "akamai":
+        baseline = ""
+        for key, value in baseline_headers.items():
+            if key.lower() == "alt-svc":
+                baseline = value
+                break
+        if "93600" in baseline:
+            return False
+    return True
