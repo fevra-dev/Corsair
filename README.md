@@ -156,6 +156,25 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.5.2 — Alt-Svc Hardening (2026-04-25)
+
+**Robustness:**
+- Replaced plain-substring canary check on `Alt-Svc` with an alt-authority-anchored regex. Correctly handles `Alt-Svc: clear`, multi-value headers, and draft protocol-ids (`h3-29`).
+- Added CDN pre-check: skip the Alt-Svc reflection probe on Cloudflare, Fastly, and Akamai-with-HTTP/3 (`ma=93600` tell). Emits `WCP_PROBE_SKIPPED` instead of a guaranteed-false negative.
+
+**New passive findings (3):**
+- `WCP_ALT_SVC_CROSS_DOMAIN` (MEDIUM) — alt-authority on a different registrable domain than the request target. PSL-aware via `tldextract`.
+- `WCP_ALT_SVC_PRIVATE_HOST` (MEDIUM) — alt-authority resolves to RFC1918/loopback IP, reserved pseudo-TLD (`.local`, `.internal`, `.invalid`, `.localhost`, `.test`, `.example`), or bare intranet hostname.
+- `WCP_ALT_SVC_EXCESSIVE_PERSISTENCE` (LOW) — `ma > 30d` combined with `persist=1`, amplifying browser-side lock-in for any future poisoning event.
+
+**Architecture:**
+- New `corsair/cache/altsvc.py` module owns Alt-Svc grammar, canary detection, passive analyzers, and pre-check.
+- `CacheOracle` gained an `alt_svc` field captured from the baseline response.
+
+**Dependency:** `tldextract>=5.0.0` added to core dependencies (Public Suffix List parsing).
+
+**Cache findings registry:** 19 → 22.
+
 ### v0.5.1 — CORS DAST Wave 2 (2026-04-24)
 
 **Bypass matrix** — CORSAuditor now ships 11 additional active probes (spec §4.2) covering the classic origin-allowlist bypass patterns:

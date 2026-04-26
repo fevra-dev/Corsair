@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "corsair-scan"
-version = "0.5.1"
+version = "0.5.2"
 description = "☠ HTTP Security Header Scanner - AI-powered analysis, CVE correlation, and MCP integration"
 readme = "README.md"
 license = {text = "MIT"}
