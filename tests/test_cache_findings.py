@@ -24,7 +24,7 @@ class TestCacheFindingDefinitions:
             assert finding.severity in Severity, f"{finding_id} has invalid severity"
 
     def test_finding_count(self):
-        assert len(ALL_CACHE_FINDINGS) == 19
+        assert len(ALL_CACHE_FINDINGS) == 22
 
     def test_no_duplicate_ids(self):
         ids = list(ALL_CACHE_FINDINGS.keys())

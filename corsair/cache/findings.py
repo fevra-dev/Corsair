@@ -218,6 +218,78 @@ _WCP_ALT_SVC_POISONING = Finding(
     cve_correlations=[_CWE_444],
 )
 
+_WCP_ALT_SVC_CROSS_DOMAIN = Finding(
+    header="Alt-Svc",
+    category=HeaderCategory.CACHING,
+    severity=Severity.MEDIUM,
+    title="Alt-Svc alt-authority on different registrable domain",
+    description=(
+        "The Alt-Svc header advertises an alternative service on a different "
+        "registrable domain than the request target. A poisoned or malicious "
+        "Alt-Svc value can pin browsers to an attacker-controlled HTTP/3 "
+        "endpoint; a cross-domain alt-authority is a strong indicator of either "
+        "misconfiguration or active exploitation."
+    ),
+    current_value=None,
+    recommendation=(
+        "Restrict Alt-Svc alt-authorities to the same registrable domain as the "
+        "origin, or omit the host portion (port-only alt-authority) so the "
+        "alternative defaults to the origin hostname."
+    ),
+    example_value='Alt-Svc: h3=":443"; ma=86400',
+    reference_url="https://datatracker.ietf.org/doc/html/rfc7838#section-2.1",
+    compliance_mappings=[_OWASP_A05],
+    cve_correlations=[_CWE_444],
+)
+
+_WCP_ALT_SVC_PRIVATE_HOST = Finding(
+    header="Alt-Svc",
+    category=HeaderCategory.CACHING,
+    severity=Severity.MEDIUM,
+    title="Alt-Svc advertises private or non-public alt-authority",
+    description=(
+        "The Alt-Svc alt-authority resolves to a private-network address "
+        "(RFC1918, loopback) or a non-public TLD (.local, .internal, .invalid). "
+        "This is almost always an internal-infrastructure leak into a public-"
+        "facing response and indicates the Alt-Svc value is generated from an "
+        "untrusted source or a stale internal config."
+    ),
+    current_value=None,
+    recommendation=(
+        "Strip Alt-Svc from responses served to the public internet when the "
+        "alt-authority points to internal infrastructure. Configure the origin "
+        "or CDN to override Alt-Svc at the edge."
+    ),
+    example_value='Alt-Svc: h3=":443"; ma=86400',
+    reference_url="https://datatracker.ietf.org/doc/html/rfc7838#section-2.1",
+    compliance_mappings=[_OWASP_A05],
+    cve_correlations=[_CWE_444],
+)
+
+_WCP_ALT_SVC_EXCESSIVE_PERSISTENCE = Finding(
+    header="Alt-Svc",
+    category=HeaderCategory.CACHING,
+    severity=Severity.LOW,
+    title="Alt-Svc ma > 30 days combined with persist=1",
+    description=(
+        "The Alt-Svc header uses both a max-age greater than 30 days and "
+        "persist=1, causing browsers to retain the alternative service mapping "
+        "across network-configuration changes for an extended window. This "
+        "amplifies the impact of any future Alt-Svc cache poisoning event by "
+        "extending victim lock-in beyond the CDN cache TTL."
+    ),
+    current_value=None,
+    recommendation=(
+        "Reduce max-age to 86400 (24h) or less. Omit persist=1 unless the "
+        "deployment specifically requires alternative services to survive "
+        "network changes."
+    ),
+    example_value='Alt-Svc: h3=":443"; ma=86400',
+    reference_url="https://datatracker.ietf.org/doc/html/rfc7838#section-3.1",
+    compliance_mappings=[_OWASP_A05],
+    cve_correlations=[_CWE_444],
+)
+
 _WCP_SET_COOKIE_POISONING = Finding(
     header="Set-Cookie",
     category=HeaderCategory.CACHING,
@@ -348,6 +420,9 @@ ALL_CACHE_FINDINGS: dict[str, Finding] = {
     "WCP_UNKEYED_HEADER_NO_REFLECT": _WCP_UNKEYED_HEADER_NO_REFLECT,
     "WCP_PROBE_SKIPPED": _WCP_PROBE_SKIPPED,
     "WCP_ALT_SVC_POISONING": _WCP_ALT_SVC_POISONING,
+    "WCP_ALT_SVC_CROSS_DOMAIN": _WCP_ALT_SVC_CROSS_DOMAIN,
+    "WCP_ALT_SVC_PRIVATE_HOST": _WCP_ALT_SVC_PRIVATE_HOST,
+    "WCP_ALT_SVC_EXCESSIVE_PERSISTENCE": _WCP_ALT_SVC_EXCESSIVE_PERSISTENCE,
     "WCP_SET_COOKIE_POISONING": _WCP_SET_COOKIE_POISONING,
     # Active - CPDoS
     "WCP_CPDOS_OVERSIZE": _WCP_CPDOS_OVERSIZE,
