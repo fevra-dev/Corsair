@@ -36,6 +36,7 @@ class CacheOracle:
     cache_control: Optional[str] = None
     vary_header: Optional[str] = None
     akamai_cache_key: Optional[str] = None
+    alt_svc: Optional[str] = None
 
 
 CDN_STATUS_HEADERS: dict[str, list[str]] = {
@@ -181,6 +182,7 @@ async def establish_oracle(
     oracle.cdn_fingerprint = fingerprint_cdn(r1_headers)
     oracle.cache_control = r1_headers.get("cache-control")
     oracle.vary_header = r1_headers.get("vary")
+    oracle.alt_svc = r1_headers.get("alt-svc")
     s1 = read_cache_status(r1_headers, oracle.cdn_fingerprint)
 
     if oracle.cdn_fingerprint == "akamai":

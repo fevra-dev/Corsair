@@ -9,10 +9,12 @@ import asyncio
 import logging
 import re
 from typing import List
+from urllib.parse import urlparse
 
 import httpx
 
 from ..models import Finding
+from . import altsvc as _altsvc
 from .findings import get_finding
 from .oracle import CacheOracle, establish_oracle
 from .probe import (
@@ -130,6 +132,14 @@ class CacheAuditor:
                     finding.current_value = f"Cache-Control: {oracle.cache_control}"
                     findings.append(finding)
 
+        if oracle.alt_svc:
+            target_host = urlparse(oracle.url).hostname or ""
+            for fid in _altsvc.analyze_alt_svc_suspicious(oracle.alt_svc, target_host):
+                f = get_finding(fid)
+                if f:
+                    f.current_value = f"Alt-Svc: {oracle.alt_svc}"
+                    findings.append(f)
+
         return findings
 
     async def _active_probes(
@@ -186,6 +196,12 @@ class CacheAuditor:
             except (asyncio.CancelledError, Exception):
                 pass
 
+        baseline_alt_svc_headers = {"alt-svc": oracle.alt_svc} if oracle.alt_svc else {}
+        alt_svc_probeable = _altsvc.should_probe_alt_svc(
+            oracle.cdn_fingerprint, baseline_alt_svc_headers
+        )
+
+        alt_svc_skipped = False
         for r in results:
             if isinstance(r, asyncio.CancelledError):
                 continue
@@ -195,10 +211,22 @@ class CacheAuditor:
             if not r.confirmed_unkeyed:
                 continue
 
+            if r.finding_id == "WCP_ALT_SVC_POISONING" and not alt_svc_probeable:
+                alt_svc_skipped = True
+                continue
+
             finding = get_finding(r.finding_id)
             if finding:
                 finding.header = r.header_name
                 finding.current_value = r.detail
                 findings.append(finding)
+
+        if alt_svc_skipped:
+            skipped = get_finding("WCP_PROBE_SKIPPED")
+            if skipped:
+                skipped.current_value = (
+                    f"alt_svc_reflection_precheck: cdn={oracle.cdn_fingerprint}"
+                )
+                findings.append(skipped)
 
         return findings
