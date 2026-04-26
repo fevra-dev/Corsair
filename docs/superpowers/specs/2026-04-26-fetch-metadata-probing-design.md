@@ -95,22 +95,22 @@ already employed in `corsair/analyzers/cookies.py`.
 
 ## 3. Probe Sequence
 
-### 3.1 Four probes — effective cost: 3 extra HTTP requests
+### 3.1 Four probes — auditor sends 4 HTTP requests when active
 
 | Probe | Purpose | Additional headers |
 |---|---|---|
-| **B** Baseline | Reuse from `scanner.scan_target()` | (none — no Sec-Fetch-* headers) |
+| **B** Baseline | Establish the unconstrained server response | (none — no Sec-Fetch-* headers) |
 | **S** Safe | Confirm server doesn't blanket-reject Sec-Fetch | `Sec-Fetch-Site: same-origin`, `Sec-Fetch-Mode: cors`, `Sec-Fetch-Dest: empty` |
 | **A** Adversarial | Primary enforcement signal | `Sec-Fetch-Site: cross-site`, `Sec-Fetch-Mode: cors`, `Sec-Fetch-Dest: empty` |
 | **C** Canary | Distinguish stripping from non-enforcement | `Sec-Fetch-Site: corsair-canary-invalid`, `Sec-Fetch-Mode: cors`, `Sec-Fetch-Dest: empty` |
 
-**Probes S, A, C run concurrently** via `asyncio.gather` over a single
-`httpx.AsyncClient`. Probe B is the existing scanner baseline — passed in via
-`baseline_headers`. The auditor itself does not currently receive the baseline
-body, so the auditor performs **its own GET as Probe B** (4 HTTP requests in
-total when the auditor runs). This avoids a cross-cutting refactor of
-`scanner.scan_target()` to plumb response bodies to all auditors. A future
-release may share the baseline.
+**All four probes run concurrently** via `asyncio.gather` over a single
+`httpx.AsyncClient`. The auditor performs its **own** Probe B rather than
+reusing the scanner's baseline — the scanner does not currently plumb response
+bodies to auditors, and Probe B's body hash is required for SOFT_ENFORCED
+classification (rule 6). Total cost when `--fm-probe` is on: 4 HTTP requests
+beyond the scanner's existing baseline. A future release may share the
+baseline body across auditors via a cross-cutting refactor.
 
 ### 3.2 What is deliberately not in any probe
 
