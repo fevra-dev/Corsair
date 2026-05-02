@@ -156,6 +156,31 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.5.3 — Fetch Metadata Probing (2026-04-26)
+
+**New DAST module:** `corsair/fetch_metadata/` — actively probes whether a server enforces a Fetch Metadata resource isolation policy. Four concurrent canary-extended HTTP probes (Baseline, Safe, Adversarial, Canary) on the target URL feed a pure `classify_enforcement()` function that returns `ENFORCED`, `SOFT_ENFORCED`, `NOT_ENFORCED`, or `INCONCLUSIVE`.
+
+**Three new findings:**
+- `FM_NO_FETCH_METADATA_POLICY` (HIGH / MEDIUM / LOW depending on cookie SameSite × CSRF token × CDN fingerprint) — server does not block browser-initiated cross-site requests at the FM layer.
+- `FM_FETCH_METADATA_ENFORCED` (PASS) — positive coverage marker when the server rejects the cross-site probe.
+- `FM_FETCH_METADATA_INCONCLUSIVE` (INFO) — ambiguous probe result (network error, blanket Sec-Fetch rejection, auth redirect).
+
+**Severity calibration:**
+- `SameSite=Strict` session cookie + CSRF token cookie → LOW.
+- Partial mitigations (Lax XOR token) → MEDIUM (LOW with CDN downgrade).
+- No mitigations → HIGH (MEDIUM with CDN downgrade).
+- `SOFT_ENFORCED` (server returns modified body for cross-site) → INFO.
+
+**False-positive defenses:**
+- Canary probe (`Sec-Fetch-Site: corsair-canary-invalid`) discriminates spec-strict enforcement from allowlist enforcement and from proxy stripping.
+- CDN-fingerprint severity downgrade for Cloudflare / Fastly / Akamai / Varnish / Nginx / CloudFront / generic.
+
+**CLI:** `--fm-probe / --no-fm-probe` (default on). Plumbed through `HeadScanner(fm_probe=True)`.
+
+**No new dependencies.** Reuses `httpx` and `corsair.cache.oracle.fingerprint_cdn`.
+
+**Spec:** `docs/superpowers/specs/2026-04-26-fetch-metadata-probing-design.md`
+
 ### v0.5.2 — Alt-Svc Hardening (2026-04-25)
 
 **Robustness:**
