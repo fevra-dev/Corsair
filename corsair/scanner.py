@@ -17,6 +17,7 @@ from .tls.auditor import TLSAuditor
 from .tls.findings import get_finding as get_tls_finding
 from .cache.auditor import CacheAuditor
 from .cors.auditor import CORSAuditor
+from .fetch_metadata import FetchMetadataAuditor
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class HeadScanner:
         cache_probe: bool = True,
         cors_probe: bool = True,
         cors_evil_origin: str = "https://evil.example",
+        fm_probe: bool = True,
     ):
         """
         Initialize scanner.
@@ -53,6 +55,7 @@ class HeadScanner:
         self.cache_probe = cache_probe
         self.cors_probe = cors_probe
         self.cors_evil_origin = cors_evil_origin
+        self.fm_probe = fm_probe
 
         logger.info(
             f"Scanner initialized: timeout={timeout}s, " f"follow_redirects={follow_redirects}"
@@ -194,6 +197,14 @@ class HeadScanner:
             findings.extend(cors_findings)
         except Exception as e:
             logger.error(f"CORS audit failed: {e}")
+
+        # Fetch Metadata enforcement probe
+        try:
+            fm_auditor = FetchMetadataAuditor(timeout=self.timeout, active=self.fm_probe)
+            fm_findings = fm_auditor.audit(final_url, headers)
+            findings.extend(fm_findings)
+        except Exception as e:
+            logger.error(f"Fetch Metadata audit failed: {e}")
 
         # Calculate score
         score = calculate_score(findings)
