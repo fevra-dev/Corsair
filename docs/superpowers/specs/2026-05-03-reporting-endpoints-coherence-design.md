@@ -150,11 +150,14 @@ guaranteed total failure of SRI monitoring.
 
 ### Classification precedence
 
-1. If a name is referenced from any IP/IP-RO header AND undefined → REPORT-004
-   (HIGH). The IP-special-case overrides everything else: even if the same name
-   appears in a CSP elsewhere on the same response, the finding is emitted as
-   REPORT-004 with **all** affected headers (IP and non-IP) listed.
-2. Else if a name is in `legacy_defs` only → REPORT-001 (LOW).
+1. If a name is referenced from any IP/IP-RO header AND **not in `modern_defs`**
+   → REPORT-004 (HIGH). Note "not in modern_defs" — the legacy `Report-To`
+   definition does **not** rescue an Integrity-Policy reference because IP does
+   not fall back to V0. The IP-special-case overrides everything else: even if
+   the same name appears in a CSP elsewhere on the same response, the finding
+   is emitted as REPORT-004 with **all** affected headers (IP and non-IP) listed.
+2. Else if a name is in `legacy_defs` only (defined in `Report-To` but not
+   `Reporting-Endpoints`) → REPORT-001 (LOW).
 3. Else (not defined anywhere) → REPORT-002 (MEDIUM).
 
 ### Placeholder downgrade
@@ -205,12 +208,20 @@ case-insensitive.
 Walk each of the 10 reference headers, extract the name(s) it references, and
 classify each unresolved reference into one of three buckets:
 
-- `orphan_map: dict[name, list[header]]` — undefined in both → REPORT-002 candidates
-- `migration_map: dict[name, list[header]]` — defined in legacy only → REPORT-001 candidates
-- `ip_orphan_map: dict[name, list[header]]` — IP/IP-RO orphan → REPORT-004 candidates
+- `ip_orphan_map: dict[name, list[header]]` — name is referenced from any IP/IP-RO
+  header AND **not in `modern_defs`** → REPORT-004 candidates. Legacy definition
+  does not rescue IP references.
+- `orphan_map: dict[name, list[header]]` — name is undefined in both
+  `modern_defs` and `legacy_defs` (and is not already in `ip_orphan_map`) →
+  REPORT-002 candidates.
+- `migration_map: dict[name, list[header]]` — name is in `legacy_defs` only
+  (defined in `Report-To` but not `Reporting-Endpoints`) → REPORT-001 candidates.
 
 Names are tracked per orphan so the same name appearing in multiple headers
-collapses to a single finding.
+collapses to a single finding. If a name lands in `ip_orphan_map`, every other
+reference to that name (from CSP, COOP, etc.) is rolled into the same REPORT-004
+finding's `affected_headers` list, ensuring no duplicate findings are emitted
+for the same orphan name.
 
 ### Stage 4 — CDN detection
 
@@ -220,13 +231,16 @@ One call to `fingerprint_cdn(headers)`. Wrapped in try/except; on failure,
 ### Stage 5 — Finding emission
 
 For each name in `ip_orphan_map`: emit REPORT-004 with all affected headers
-listed (including any non-IP headers that also reference the same orphan).
-Remove that name from `orphan_map` and `migration_map` to avoid double-emission.
+listed (the bucketing in Stage 3 has already absorbed any non-IP references to
+the same name into this map).
 
-For each name remaining in `migration_map`: emit REPORT-001.
+For each name in `migration_map`: emit REPORT-001.
 
-For each name remaining in `orphan_map`: emit REPORT-002 (apply placeholder
-downgrade if applicable).
+For each name in `orphan_map`: emit REPORT-002 (apply placeholder downgrade if
+applicable).
+
+Because Stage 3 routes each name to exactly one bucket, no double-emission is
+possible — a single dedup pass at the end is unnecessary.
 
 Each finding is built via `_build_finding(template, orphan_name, affected_headers, cdn_detected)`,
 which deepcopies the template, injects the orphan name into the title and
@@ -348,6 +362,8 @@ Drive the classification logic directly with crafted definition/reference inputs
 
 - IP-only orphan → REPORT-004 HIGH
 - IP orphan + same name in CSP → REPORT-004 (IP wins, both headers listed)
+- IP references a name that is in `Report-To` only (legacy fallback does not
+  rescue IP) → REPORT-004 HIGH
 - Name in `Report-To` only, referenced from CSP → REPORT-001 LOW
 - Name in nothing, referenced from CSP → REPORT-002 MEDIUM
 - Placeholder (`todo`) referenced only from CSP-RO → REPORT-002 downgraded to INFO
