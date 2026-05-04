@@ -284,3 +284,279 @@ class TestBuildFinding:
     def test_no_cdn_caveat_when_not_detected(self):
         f = _build_finding(_REPORT_002_TEMPLATE, "ghost", ["Content-Security-Policy"], cdn_detected=False)
         assert "CDN" not in f.description
+
+
+# ---------------------------------------------------------------------------
+# ReportingCoherenceAnalyzer — classification (Layer 2 from spec)
+# ---------------------------------------------------------------------------
+
+from corsair.analyzers.reporting import ReportingCoherenceAnalyzer
+
+
+def _make_analyzer(headers, url="https://example.com/"):
+    return ReportingCoherenceAnalyzer(headers=headers, url=url)
+
+
+def _ids(findings):
+    """Return a sorted list of (severity, header) tuples for stable comparison."""
+    return sorted([(f.severity.value, f.header) for f in findings])
+
+
+class TestClassification:
+    def test_ip_only_orphan_is_high(self):
+        headers = {
+            "content-type": "text/html",
+            "integrity-policy": "endpoints=(missing-ip-ep)",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.HIGH
+
+    def test_ip_orphan_with_csp_referrer_collapses_to_single_high(self):
+        headers = {
+            "content-type": "text/html",
+            "integrity-policy": "endpoints=(shared-orphan)",
+            "content-security-policy": "default-src 'self'; report-to shared-orphan",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.HIGH
+        assert "Integrity-Policy" in findings[0].header
+        assert "Content-Security-Policy" in findings[0].header
+
+    def test_ip_orphan_with_legacy_only_definition_is_high(self):
+        # IP does NOT fall back to Report-To, so legacy-only definition does
+        # not rescue the IP reference.
+        headers = {
+            "content-type": "text/html",
+            "report-to": '{"group": "legacy-only", "endpoints": [{"url": "https://r"}]}',
+            "integrity-policy": "endpoints=(legacy-only)",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.HIGH
+
+    def test_csp_reference_to_legacy_only_is_low(self):
+        # CSP CAN fall back to Report-To in Chromium, so this is a migration
+        # gap, not a hard orphan.
+        headers = {
+            "content-type": "text/html",
+            "report-to": '{"group": "legacy-grp", "endpoints": [{"url": "https://r"}]}',
+            "content-security-policy": "default-src 'self'; report-to legacy-grp",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.LOW
+
+    def test_csp_reference_to_undefined_name_is_medium(self):
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.MEDIUM
+
+    def test_placeholder_in_report_only_downgraded_to_info(self):
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy-report-only": "default-src 'self'; report-to todo",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.INFO
+
+    def test_placeholder_in_enforcing_csp_stays_medium(self):
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to todo",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.MEDIUM
+
+    def test_placeholder_in_integrity_policy_stays_high(self):
+        headers = {
+            "content-type": "text/html",
+            "integrity-policy": "endpoints=(todo)",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.HIGH
+
+    def test_same_orphan_in_three_headers_collapses(self):
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+            "content-security-policy-report-only": "default-src 'self'; report-to ghost",
+            "cross-origin-opener-policy": 'same-origin; report-to="ghost"',
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        h = findings[0].header
+        assert "Content-Security-Policy" in h
+        assert "Content-Security-Policy-Report-Only" in h
+        assert "Cross-Origin-Opener-Policy" in h
+
+    def test_two_distinct_orphans_emit_two_findings(self):
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost-a",
+            "cross-origin-opener-policy": 'same-origin; report-to="ghost-b"',
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 2
+        # Both MEDIUM, distinct names.
+        names_in_descriptions = {f.description for f in findings}
+        assert any("ghost-a" in d for d in names_in_descriptions)
+        assert any("ghost-b" in d for d in names_in_descriptions)
+
+
+# ---------------------------------------------------------------------------
+# Analyzer integration tests (Layer 3 from spec)
+# ---------------------------------------------------------------------------
+
+class TestAnalyzerIntegration:
+    def test_healthy_site_no_findings(self):
+        headers = {
+            "content-type": "text/html",
+            "reporting-endpoints": 'main="https://reports.example.com/main"',
+            "content-security-policy": "default-src 'self'; report-to main",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert findings == []
+
+    def test_no_reporting_headers_no_findings(self):
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert findings == []
+
+    def test_reporting_endpoints_defined_but_unreferenced_no_findings(self):
+        headers = {
+            "content-type": "text/html",
+            "reporting-endpoints": 'main="https://r.example.com/r"',
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert findings == []
+
+    def test_non_html_response_skipped_even_with_orphans(self):
+        headers = {
+            "content-type": "application/json",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert findings == []
+
+    def test_missing_content_type_runs_analyzer(self):
+        headers = {
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.MEDIUM
+
+    def test_walkthrough_example_emits_three_findings(self):
+        # The §7 walkthrough from the spec.
+        headers = {
+            "content-type": "text/html; charset=utf-8",
+            "reporting-endpoints": 'csp-endpoint="https://reports.example.com/csp"',
+            "report-to": '{"group":"legacy-group","max_age":10886400,"endpoints":[{"url":"https://r.example.com"}]}',
+            "content-security-policy": "default-src 'self'; report-to csp-endpoint",
+            "content-security-policy-report-only": "default-src 'self'; report-to ghost-endpoint",
+            "cross-origin-opener-policy": 'same-origin; report-to="legacy-group"',
+            "cross-origin-embedder-policy": 'require-corp; report-to="ghost-endpoint"',
+            "integrity-policy": "blocked-destinations=(script), endpoints=(missing-ip-endpoint)",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert {f.severity for f in findings} == {Severity.HIGH, Severity.MEDIUM, Severity.LOW}
+        assert len(findings) == 3
+        # MEDIUM finding should list both CSP-RO and COEP.
+        medium = next(f for f in findings if f.severity == Severity.MEDIUM)
+        assert "Content-Security-Policy-Report-Only" in medium.header
+        assert "Cross-Origin-Embedder-Policy" in medium.header
+
+    def test_cdn_detected_appends_caveat(self, monkeypatch):
+        from corsair.analyzers import reporting as mod
+        monkeypatch.setattr(mod, "fingerprint_cdn", lambda _h: "cloudflare")
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert "CDN" in findings[0].description or "edge" in findings[0].description
+
+    def test_no_cdn_no_caveat(self, monkeypatch):
+        from corsair.analyzers import reporting as mod
+        monkeypatch.setattr(mod, "fingerprint_cdn", lambda _h: None)
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert "CDN" not in findings[0].description
+
+    def test_severity_unchanged_with_or_without_cdn(self, monkeypatch):
+        from corsair.analyzers import reporting as mod
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+
+        monkeypatch.setattr(mod, "fingerprint_cdn", lambda _h: None)
+        sev_no = _make_analyzer(headers).analyze()[0].severity
+        monkeypatch.setattr(mod, "fingerprint_cdn", lambda _h: "cloudflare")
+        sev_yes = _make_analyzer(headers).analyze()[0].severity
+        assert sev_no == sev_yes == Severity.MEDIUM
+
+    def test_coop_ro_and_coep_ro_extracted(self):
+        headers = {
+            "content-type": "text/html",
+            "cross-origin-opener-policy-report-only": 'same-origin; report-to="ghost-coop-ro"',
+            "cross-origin-embedder-policy-report-only": 'require-corp; report-to="ghost-coep-ro"',
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 2
+        names_in_descriptions = " ".join(f.description for f in findings)
+        assert "ghost-coop-ro" in names_in_descriptions
+        assert "ghost-coep-ro" in names_in_descriptions
+
+    def test_malformed_report_to_does_not_crash(self):
+        headers = {
+            "content-type": "text/html",
+            "report-to": "this is not valid json {{{",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        # Should not raise; ghost remains an orphan.
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.MEDIUM
+
+    def test_malformed_reporting_endpoints_does_not_crash(self):
+        headers = {
+            "content-type": "text/html",
+            "reporting-endpoints": "completely malformed structured field",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.MEDIUM
+
+    def test_fingerprint_cdn_raises_no_crash(self, monkeypatch):
+        from corsair.analyzers import reporting as mod
+
+        def boom(_h):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(mod, "fingerprint_cdn", boom)
+        headers = {
+            "content-type": "text/html",
+            "content-security-policy": "default-src 'self'; report-to ghost",
+        }
+        findings = _make_analyzer(headers).analyze()
+        assert len(findings) == 1
+        assert "CDN" not in findings[0].description

@@ -372,3 +372,163 @@ def _build_finding(
     if cdn_detected:
         f.description += _CDN_CAVEAT
     return f
+
+
+# ---------------------------------------------------------------------------
+# Analyzer class
+# ---------------------------------------------------------------------------
+
+# Display-cased header names for the Finding.header field. Keep in sync with
+# REFERENCE_HEADERS_* tuples above.
+_DISPLAY_HEADER_NAMES: Dict[str, str] = {
+    "content-security-policy": "Content-Security-Policy",
+    "content-security-policy-report-only": "Content-Security-Policy-Report-Only",
+    "cross-origin-opener-policy": "Cross-Origin-Opener-Policy",
+    "cross-origin-opener-policy-report-only": "Cross-Origin-Opener-Policy-Report-Only",
+    "cross-origin-embedder-policy": "Cross-Origin-Embedder-Policy",
+    "cross-origin-embedder-policy-report-only": "Cross-Origin-Embedder-Policy-Report-Only",
+    "document-isolation-policy": "Document-Isolation-Policy",
+    "nel": "NEL",
+    "integrity-policy": "Integrity-Policy",
+    "integrity-policy-report-only": "Integrity-Policy-Report-Only",
+}
+
+_REPORT_ONLY_HEADERS = frozenset({
+    "content-security-policy-report-only",
+    "cross-origin-opener-policy-report-only",
+    "cross-origin-embedder-policy-report-only",
+    "integrity-policy-report-only",
+})
+
+
+class ReportingCoherenceAnalyzer(BaseAnalyzer):
+    """Cross-references reporting endpoint references against definitions.
+
+    Restricts itself to navigation-style responses (HTML/XHTML/XML) to suppress
+    SPA sub-resource false positives. Three findings per spec section 5:
+    REPORT-001 (LOW migration), REPORT-002 (MEDIUM generic orphan), REPORT-004
+    (HIGH Integrity-Policy orphan). One finding per orphan name; affected
+    reference headers are listed in the header field and description.
+    """
+
+    HEADER_NAME = "Reporting-Endpoints"
+    CATEGORY = HeaderCategory.REPORTING
+
+    def analyze(self) -> List[Finding]:
+        # Stage 1 — discriminator gate
+        if not _is_navigation_response(self.headers):
+            return []
+
+        # Stage 2 — definitions
+        modern_defs = _parse_reporting_endpoints(self._headers_lower.get("reporting-endpoints", ""))
+        legacy_defs = _parse_report_to(self._headers_lower.get("report-to", ""))
+
+        # Stage 3 — references → buckets
+        ip_orphan_map, orphan_map, migration_map = self._collect_orphans(modern_defs, legacy_defs)
+
+        if not (ip_orphan_map or orphan_map or migration_map):
+            return []
+
+        # Stage 4 — CDN detection
+        cdn_detected = self._detect_cdn()
+
+        # Stage 5 — finding emission
+        return self._build_findings(ip_orphan_map, orphan_map, migration_map, cdn_detected)
+
+    # ---- helpers -------------------------------------------------------
+
+    def _collect_orphans(
+        self, modern_defs: Set[str], legacy_defs: Set[str]
+    ) -> tuple[Dict[str, List[str]], Dict[str, List[str]], Dict[str, List[str]]]:
+        """Walk all reference headers and bucket each unresolved reference.
+
+        Returns (ip_orphan_map, orphan_map, migration_map). Each dict maps
+        orphan_name -> list of display-cased reference header names.
+        """
+        # Pass 1: collect every (name, header_lower) reference pair.
+        refs: List[tuple[str, str]] = []  # (name, header_lower)
+
+        for h in REFERENCE_HEADERS_CSP_STYLE:
+            name = _extract_csp_report_to(self._headers_lower.get(h, ""))
+            if name:
+                refs.append((name, h))
+
+        for h in REFERENCE_HEADERS_PARAM_STYLE:
+            name = _extract_param_report_to(self._headers_lower.get(h, ""))
+            if name:
+                refs.append((name, h))
+
+        for h in REFERENCE_HEADERS_NEL:
+            name = _extract_nel_report_to(self._headers_lower.get(h, ""))
+            if name:
+                refs.append((name, h))
+
+        for h in REFERENCE_HEADERS_INTEGRITY:
+            for name in _extract_integrity_endpoints(self._headers_lower.get(h, "")):
+                refs.append((name, h))
+
+        # Pass 2: classify each name.
+        # First, identify which names are referenced from any IP header AND not
+        # in modern_defs — those are REPORT-004 candidates.
+        ip_orphan_names: Set[str] = set()
+        for name, h in refs:
+            if h in REFERENCE_HEADERS_INTEGRITY and name not in modern_defs:
+                ip_orphan_names.add(name)
+
+        ip_orphan_map: Dict[str, List[str]] = {}
+        orphan_map: Dict[str, List[str]] = {}
+        migration_map: Dict[str, List[str]] = {}
+
+        seen_per_name: Dict[str, Set[str]] = {}  # for dedup of (name, display_header)
+
+        for name, h in refs:
+            display = _DISPLAY_HEADER_NAMES.get(h, h)
+            seen_headers = seen_per_name.setdefault(name, set())
+            if display in seen_headers:
+                continue
+            seen_headers.add(display)
+
+            if name in ip_orphan_names:
+                ip_orphan_map.setdefault(name, []).append(display)
+            elif name in modern_defs:
+                continue  # resolved
+            elif name in legacy_defs:
+                migration_map.setdefault(name, []).append(display)
+            else:
+                orphan_map.setdefault(name, []).append(display)
+
+        return ip_orphan_map, orphan_map, migration_map
+
+    def _detect_cdn(self) -> bool:
+        try:
+            return bool(fingerprint_cdn(self.headers))
+        except Exception as e:
+            logger.debug(f"fingerprint_cdn raised: {e}")
+            return False
+
+    def _build_findings(
+        self,
+        ip_orphan_map: Dict[str, List[str]],
+        orphan_map: Dict[str, List[str]],
+        migration_map: Dict[str, List[str]],
+        cdn_detected: bool,
+    ) -> List[Finding]:
+        out: List[Finding] = []
+
+        for name, headers in ip_orphan_map.items():
+            out.append(_build_finding(_REPORT_004_TEMPLATE, name, headers, cdn_detected))
+
+        for name, headers in migration_map.items():
+            out.append(_build_finding(_REPORT_001_TEMPLATE, name, headers, cdn_detected))
+
+        for name, headers in orphan_map.items():
+            f = _build_finding(_REPORT_002_TEMPLATE, name, headers, cdn_detected)
+            # Placeholder downgrade: name is a known placeholder AND every
+            # referencing header is a Report-Only variant -> INFO.
+            if name in PLACEHOLDER_NAMES:
+                referencing_lower = {h.lower() for h in headers}
+                if referencing_lower.issubset(_REPORT_ONLY_HEADERS):
+                    f.severity = Severity.INFO
+            out.append(f)
+
+        return out
