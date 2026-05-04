@@ -35,6 +35,9 @@ from .cross_origin import (
     DocumentPolicyAnalyzer,
 )
 
+# Reporting coherence (v0.5.4)
+from .reporting import ReportingCoherenceAnalyzer
+
 # List of all analyzers to run
 # Order matters: more critical analyzers first
 ALL_ANALYZERS = [
@@ -57,6 +60,8 @@ ALL_ANALYZERS = [
     CORSAnalyzer,
     # Cookie security
     CookieAnalyzer,
+    # Reporting endpoint coherence (v0.5.4)
+    ReportingCoherenceAnalyzer,
     # Additional headers (Server, X-Powered-By, etc.)
     AdditionalHeadersAnalyzer,
 ]
@@ -80,6 +85,8 @@ __all__ = [
     "CrossOriginIsolationAnalyzer",
     "OriginAgentClusterAnalyzer",
     "DocumentPolicyAnalyzer",
+    # Reporting coherence
+    "ReportingCoherenceAnalyzer",
     # Registry
     "ALL_ANALYZERS",
 ]

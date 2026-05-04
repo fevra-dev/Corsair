@@ -560,3 +560,67 @@ class TestAnalyzerIntegration:
         findings = _make_analyzer(headers).analyze()
         assert len(findings) == 1
         assert "CDN" not in findings[0].description
+
+
+# ---------------------------------------------------------------------------
+# Scanner-integration smoke (Layer 4 from spec)
+# ---------------------------------------------------------------------------
+
+from unittest.mock import patch
+
+from corsair.analyzers import ALL_ANALYZERS, get_analyzer_names
+
+
+class TestScannerIntegration:
+    def test_analyzer_registered(self):
+        assert "ReportingCoherenceAnalyzer" in get_analyzer_names()
+        assert ReportingCoherenceAnalyzer in ALL_ANALYZERS
+
+    def test_scanner_finds_orphan_in_csp(self):
+        from corsair.scanner import HeadScanner
+
+        # Mock httpx so the scan returns a deterministic header set with an
+        # orphaned CSP report-to.
+        scanner = HeadScanner(timeout=5)
+
+        def fake_fetch(self, url):
+            headers = {
+                "content-type": "text/html",
+                "content-security-policy": "default-src 'self'; report-to ghost-rt",
+            }
+            return (200, headers, url, None)
+
+        with patch.object(HeadScanner, "_fetch_headers", fake_fetch):
+            result = scanner.scan_target("https://example.com/")
+
+        # Find the REPORT-002 finding.
+        report_findings = [
+            f for f in result.findings if f.category == HeaderCategory.REPORTING
+        ]
+        assert any(
+            f.severity == Severity.MEDIUM and "ghost-rt" in f.description
+            for f in report_findings
+        )
+
+    def test_scanner_clean_response_no_reporting_findings(self):
+        from corsair.scanner import HeadScanner
+
+        scanner = HeadScanner(timeout=5)
+
+        def fake_fetch(self, url):
+            headers = {
+                "content-type": "text/html",
+                "reporting-endpoints": 'main="https://reports.example.com/main"',
+                "content-security-policy": "default-src 'self'; report-to main",
+            }
+            return (200, headers, url, None)
+
+        with patch.object(HeadScanner, "_fetch_headers", fake_fetch):
+            result = scanner.scan_target("https://example.com/")
+
+        report_findings = [
+            f for f in result.findings if f.category == HeaderCategory.REPORTING
+        ]
+        # No REPORT-* findings (the analyzer is silent on healthy sites).
+        for f in report_findings:
+            assert f.severity == Severity.PASS or "Reporting" not in f.title
