@@ -218,3 +218,69 @@ class TestIsNavigationResponse:
 
     def test_case_insensitive_content_type_header_name(self):
         assert _is_navigation_response({"Content-Type": "text/html"}) is True
+
+
+# ---------------------------------------------------------------------------
+# Finding templates + _build_finding
+# ---------------------------------------------------------------------------
+
+from corsair.analyzers.reporting import (
+    _REPORT_001_TEMPLATE,
+    _REPORT_002_TEMPLATE,
+    _REPORT_004_TEMPLATE,
+    _build_finding,
+)
+from corsair.models import HeaderCategory, Severity
+
+
+class TestFindingTemplates:
+    def test_report_001_is_low_severity(self):
+        assert _REPORT_001_TEMPLATE.severity == Severity.LOW
+
+    def test_report_002_is_medium_severity(self):
+        assert _REPORT_002_TEMPLATE.severity == Severity.MEDIUM
+
+    def test_report_004_is_high_severity(self):
+        assert _REPORT_004_TEMPLATE.severity == Severity.HIGH
+
+    def test_all_templates_use_reporting_category(self):
+        for tpl in (_REPORT_001_TEMPLATE, _REPORT_002_TEMPLATE, _REPORT_004_TEMPLATE):
+            assert tpl.category == HeaderCategory.REPORTING
+
+
+class TestBuildFinding:
+    def test_returns_deepcopy_not_template(self):
+        f = _build_finding(_REPORT_002_TEMPLATE, "ghost", ["Content-Security-Policy"], cdn_detected=False)
+        assert f is not _REPORT_002_TEMPLATE
+        # Mutating the result must not pollute the template.
+        f.title = "MUTATED"
+        assert _REPORT_002_TEMPLATE.title != "MUTATED"
+
+    def test_orphan_name_in_description(self):
+        f = _build_finding(_REPORT_002_TEMPLATE, "ghost-endpoint", ["Content-Security-Policy"], cdn_detected=False)
+        assert "ghost-endpoint" in f.description
+
+    def test_affected_headers_in_header_field(self):
+        f = _build_finding(
+            _REPORT_002_TEMPLATE, "ghost",
+            ["Content-Security-Policy", "Cross-Origin-Embedder-Policy"],
+            cdn_detected=False,
+        )
+        assert "Content-Security-Policy" in f.header
+        assert "Cross-Origin-Embedder-Policy" in f.header
+
+    def test_current_value_includes_orphan_and_headers(self):
+        f = _build_finding(
+            _REPORT_002_TEMPLATE, "ghost",
+            ["Content-Security-Policy"], cdn_detected=False,
+        )
+        assert "ghost" in f.current_value
+        assert "Content-Security-Policy" in f.current_value
+
+    def test_cdn_caveat_appended_when_detected(self):
+        f = _build_finding(_REPORT_002_TEMPLATE, "ghost", ["Content-Security-Policy"], cdn_detected=True)
+        assert "CDN" in f.description or "edge" in f.description
+
+    def test_no_cdn_caveat_when_not_detected(self):
+        f = _build_finding(_REPORT_002_TEMPLATE, "ghost", ["Content-Security-Policy"], cdn_detected=False)
+        assert "CDN" not in f.description

@@ -235,3 +235,140 @@ def _is_navigation_response(headers: Dict[str, str]) -> bool:
     # Strip parameters: 'text/html; charset=utf-8' -> 'text/html'
     main = ct.split(";", 1)[0].strip()
     return main in NAVIGATION_CONTENT_TYPES
+
+
+# ---------------------------------------------------------------------------
+# Compliance/CWE constants for finding templates
+# ---------------------------------------------------------------------------
+
+def _compliance(framework: str, req_id: str, req_name: str, status: str = "FAIL") -> ComplianceMapping:
+    return ComplianceMapping(
+        framework=framework,
+        requirement_id=req_id,
+        requirement_name=req_name,
+        status=status,
+    )
+
+
+def _cwe(cwe_id: str, desc: str) -> CVECorrelation:
+    return CVECorrelation(cve_id=cwe_id, cvss_score=0.0, description=desc)
+
+
+_OWASP_A05 = _compliance("OWASP_TOP_10_2025", "A05", "Security Misconfiguration")
+_OWASP_A09 = _compliance(
+    "OWASP_TOP_10_2025", "A09", "Security Logging and Monitoring Failures"
+)
+_PCI_11_6_1 = _compliance(
+    "PCI_DSS_4_0", "11.6.1", "Detect unauthorized changes to HTTP headers and payment-page content"
+)
+_CWE_778 = _cwe("CWE-778", "Insufficient Logging")
+_CWE_693 = _cwe("CWE-693", "Protection Mechanism Failure")
+
+_CDN_CAVEAT = (
+    " If reporting endpoints are injected by a CDN/edge gateway, this finding "
+    "may be a false positive on a direct-origin scan."
+)
+
+
+# ---------------------------------------------------------------------------
+# Finding templates — populated with placeholders that _build_finding fills
+# ---------------------------------------------------------------------------
+
+_REPORT_001_TEMPLATE = Finding(
+    header="Reporting-Endpoints",
+    category=HeaderCategory.REPORTING,
+    severity=Severity.LOW,
+    title="Incomplete Migration to Modern Reporting API",
+    description=(
+        "The endpoint name '{name}' is referenced by {headers} and is defined "
+        "in the legacy Report-To header but missing from the modern "
+        "Reporting-Endpoints header. Chromium browsers fall back to the V0 "
+        "cache for most policies, so reporting still functions on legacy "
+        "browsers — but modern policies (e.g., Integrity-Policy) require the "
+        "new header and will not work."
+    ),
+    current_value="Reference: {name} (in: {headers})",
+    recommendation=(
+        "Mirror the endpoint definition in the Reporting-Endpoints header "
+        "using RFC 8941 Structured Fields syntax."
+    ),
+    example_value='Reporting-Endpoints: {name}="https://reports.example.com/{name}"',
+    reference_url=REFERENCE_URL,
+    compliance_mappings=[_OWASP_A05],
+    cve_correlations=[_CWE_778],
+)
+
+_REPORT_002_TEMPLATE = Finding(
+    header="Reporting-Endpoints",
+    category=HeaderCategory.REPORTING,
+    severity=Severity.MEDIUM,
+    title="Orphaned Security Reporting Endpoint",
+    description=(
+        "The endpoint name '{name}' is referenced by {headers} but is not "
+        "defined in either the modern Reporting-Endpoints header or the "
+        "legacy Report-To header. The browser will silently discard every "
+        "report for this name, leaving the site owner blind to security "
+        "violations such as CSP breaches and cross-origin isolation failures."
+    ),
+    current_value="Reference: {name} (in: {headers})",
+    recommendation=(
+        "Add a Reporting-Endpoints header that defines the referenced name "
+        "with a valid HTTPS URL."
+    ),
+    example_value='Reporting-Endpoints: {name}="https://reports.example.com/{name}"',
+    reference_url=REFERENCE_URL,
+    compliance_mappings=[_OWASP_A05, _OWASP_A09],
+    cve_correlations=[_CWE_778],
+)
+
+_REPORT_004_TEMPLATE = Finding(
+    header="Integrity-Policy",
+    category=HeaderCategory.REPORTING,
+    severity=Severity.HIGH,
+    title="Integrity-Policy Monitoring Failure",
+    description=(
+        "The endpoint name '{name}' is referenced by {headers} (an "
+        "Integrity-Policy or Integrity-Policy-Report-Only header) but is not "
+        "defined in the Reporting-Endpoints header. Integrity-Policy does "
+        "NOT fall back to legacy Report-To, so SRI violation reports are "
+        "guaranteed to be silently discarded — a complete failure of the "
+        "subresource integrity monitoring pipeline."
+    ),
+    current_value="Reference: {name} (in: {headers})",
+    recommendation=(
+        "Define the names listed in the Integrity-Policy endpoints=(...) "
+        "parameter inside a Reporting-Endpoints header. Note that legacy "
+        "Report-To definitions do not satisfy Integrity-Policy."
+    ),
+    example_value='Reporting-Endpoints: {name}="https://reports.example.com/integrity"',
+    reference_url=REFERENCE_URL,
+    compliance_mappings=[_OWASP_A05, _OWASP_A09, _PCI_11_6_1],
+    cve_correlations=[_CWE_778, _CWE_693],
+)
+
+
+# ---------------------------------------------------------------------------
+# Finding builder
+# ---------------------------------------------------------------------------
+
+def _build_finding(
+    template: Finding,
+    orphan_name: str,
+    affected_headers: List[str],
+    cdn_detected: bool,
+) -> Finding:
+    """Construct an emitted Finding from a template, injecting orphan name and
+    affected reference headers. Appends the CDN caveat to the description if
+    cdn_detected is True. Severity is taken from the template — callers handle
+    severity overrides (placeholder downgrade) before calling _build_finding.
+    """
+    f = copy.deepcopy(template)
+    headers_csv = ", ".join(affected_headers)
+    f.header = headers_csv
+    f.title = f.title  # title is generic by design; orphan name lives in description/current_value
+    f.description = f.description.replace("{name}", orphan_name).replace("{headers}", headers_csv)
+    f.current_value = f.current_value.replace("{name}", orphan_name).replace("{headers}", headers_csv)
+    f.example_value = f.example_value.replace("{name}", orphan_name)
+    if cdn_detected:
+        f.description += _CDN_CAVEAT
+    return f
