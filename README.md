@@ -156,6 +156,41 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.5.4 — Reporting-Endpoints Coherence Detection
+
+**Released:** 2026-05-03
+
+#### New: Reporting-Endpoints Coherence Analyzer
+
+Adds static-analysis detection of orphaned reporting endpoint references — names
+referenced by policy headers (CSP, CSP-RO, COOP, COOP-RO, COEP, COEP-RO, DIP,
+NEL, Integrity-Policy, Integrity-Policy-RO) but undefined in `Reporting-Endpoints`
+or `Report-To`. Browsers silently discard reports for unresolved names, leaving
+the site owner blind to security violations with no surface signal.
+
+**Three findings:**
+
+- **REPORT-001 (LOW)** — *Incomplete Migration to Modern Reporting API.* Name
+  is defined in legacy `Report-To` but missing from modern `Reporting-Endpoints`.
+  Chromium falls back to V0 for most policies — modern policies (Integrity-Policy)
+  do not.
+- **REPORT-002 (MEDIUM)** — *Orphaned Security Reporting Endpoint.* Name is
+  referenced from a policy header but undefined anywhere. Browser silently
+  discards every report.
+- **REPORT-004 (HIGH)** — *Integrity-Policy Monitoring Failure.* `Integrity-Policy`
+  references an undefined name. Special-cased because IP does **not** fall back
+  to V0 `Report-To`, so the SRI monitoring pipeline is guaranteed to be broken.
+
+**Implementation notes:**
+
+- Pure static analysis. No new HTTP requests, no async, no new dependencies.
+- Restricted to navigation-style responses (`text/html`, `application/xhtml+xml`,
+  `application/xml`, `text/xml`) to suppress SPA sub-resource false positives.
+- Appends a CDN caveat to findings when a CDN is fingerprinted on the response —
+  reporting endpoints injected at the edge would not appear on a direct-origin scan.
+- Placeholder names (`none`, `todo`, `dummy`, `test`, `placeholder`) referenced
+  exclusively from `*-Report-Only` headers are downgraded to INFO.
+
 ### v0.5.3 — Fetch Metadata Probing (2026-04-26)
 
 **New DAST module:** `corsair/fetch_metadata/` — actively probes whether a server enforces a Fetch Metadata resource isolation policy. Four concurrent canary-extended HTTP probes (Baseline, Safe, Adversarial, Canary) on the target URL feed a pure `classify_enforcement()` function that returns `ENFORCED`, `SOFT_ENFORCED`, `NOT_ENFORCED`, or `INCONCLUSIVE`.
