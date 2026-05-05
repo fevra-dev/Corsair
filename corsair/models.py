@@ -49,6 +49,7 @@ class HeaderCategory(Enum):
     COOKIES = "cookies"  # Cookie security flags
     CACHING = "caching"  # Cache-Control security
     REPORTING = "reporting"  # NEL, Reporting-Endpoints, Report-To
+    INTEGRITY = "integrity"  # Integrity-Policy, SRI
     FINGERPRINT = "fingerprint"  # Server, X-Powered-By (info disclosure)
     DEPRECATED = "deprecated"  # HPKP, X-XSS-Protection, Expect-CT
 
