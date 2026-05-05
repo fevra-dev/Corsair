@@ -4,7 +4,7 @@ RFC 9651 Structured Fields Dictionary; SRI §3.8.
 """
 
 import re
-from typing import Dict, List
+from typing import Dict
 
 
 # Recognized destination tokens per SRI §3.8.
@@ -49,7 +49,6 @@ def _parse_integrity_policy(value: str) -> Dict:
         parsed["parse_error"] = True
         return parsed
 
-    sources_seen = False
     for m in members:
         key = m.group(1).strip().lower()
         inner = m.group(2).strip()
@@ -58,12 +57,9 @@ def _parse_integrity_policy(value: str) -> Dict:
             parsed["blocked_destinations"] = tokens
         elif key == "sources":
             parsed["sources"] = tokens
-            sources_seen = True
         elif key == "endpoints":
             parsed["endpoints"] = tokens
 
-    if not sources_seen:
-        parsed["sources"] = ["inline"]
     return parsed
 
 
