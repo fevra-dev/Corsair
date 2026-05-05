@@ -451,7 +451,7 @@ IP-006 is the discriminating capability. No other public scanner detects the pag
 The implementation is complete when:
 
 1. `python3 -c "from corsair.integrity_policy import IntegrityPolicyAuditor; print('OK')"` imports without error.
-2. `IntegrityPolicyAuditor(timeout=10, active=True).audit(url, headers)` returns a `list[Finding]` for the eleven test scenarios in §6.3.
+2. `IntegrityPolicyAuditor(timeout=10, active=True).audit(url, headers)` returns a `list[Finding]` for every scenario in §6.3.
 3. `corsair --help` shows `--ip-probe / --no-ip-probe` (default ON).
 4. `python3 -m pytest tests/test_integrity_policy_*.py -v` passes (target: ~70 tests).
 5. `python3 -m pytest --ignore=tests/test_tls_auditor.py` shows zero new failures vs v0.5.4 baseline.
