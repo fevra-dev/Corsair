@@ -22,11 +22,11 @@ ONE_MEGABYTE = 1024 * 1024  # body cap
 _DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
-# Match opening <script ...> tag (NOT closing </script>). DOTALL so multi-line
-# tags match. Capture inner attributes as group 1.
+# Match opening <script ...> tag (NOT closing </script>). [^>]*? naturally
+# crosses newlines (it excludes >, not \n), so DOTALL is unnecessary here.
 _SCRIPT_TAG_RE = re.compile(
     r"<script\b([^>]*?)>",
-    re.IGNORECASE | re.DOTALL,
+    re.IGNORECASE,
 )
 
 # Attribute extractors. Independent regexes — order-agnostic within the tag.

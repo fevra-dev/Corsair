@@ -1,5 +1,6 @@
 """Tests for corsair.integrity_policy.body."""
 
+import httpx
 import pytest
 
 from corsair.integrity_policy.body import (
@@ -241,8 +242,7 @@ class TestFetchBody:
         assert error == "HTTP 500"
 
     def test_timeout_returns_request_timeout(self, httpx_mock):
-        import httpx as _httpx
-        httpx_mock.add_exception(_httpx.ReadTimeout("read timeout"))
+        httpx_mock.add_exception(httpx.ReadTimeout("read timeout"))
         body, error = _fetch_body("https://example.com/", 1, "TestUA/1.0")
         assert body == ""
         assert error == "Request timeout"
