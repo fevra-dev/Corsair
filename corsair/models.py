@@ -50,6 +50,7 @@ class HeaderCategory(Enum):
     CACHING = "caching"  # Cache-Control security
     REPORTING = "reporting"  # NEL, Reporting-Endpoints, Report-To
     INTEGRITY = "integrity"  # Integrity-Policy, SRI
+    H3 = "h3"  # HTTP/3, QUIC, 0-RTT, H1/H3 header drift, LSQUIC fingerprint
     FINGERPRINT = "fingerprint"  # Server, X-Powered-By (info disclosure)
     DEPRECATED = "deprecated"  # HPKP, X-XSS-Protection, Expect-CT
 
