@@ -1515,7 +1515,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 # The aioquic imports below raise ImportError when [h3] extra is absent.
-# corsair/h3/__init__.py catches that to set h3_available=False.
+# corsair/h3/__init__.py catches that to set H3_AVAILABLE=False.
 from aioquic.asyncio import connect
 from aioquic.asyncio.protocol import QuicConnectionProtocol
 from aioquic.h3.connection import H3Connection, H3_ALPN
@@ -1769,7 +1769,7 @@ class TestGateSkips:
 
 class TestExtrasMissing:
     def test_emits_extras_missing_finding(self):
-        with patch("corsair.h3.auditor.h3_available", False):
+        with patch("corsair.h3.auditor.H3_AVAILABLE", False):
             a = H3Auditor(timeout=5)
             findings = a.audit(
                 "https://example.com/", {"Alt-Svc": 'h3=":443"'}
@@ -2082,12 +2082,12 @@ from .findings import (
 from .probe import derive_h3_target, is_lsquic_fingerprint
 
 # Imported via the package __init__ availability flag. When [h3] extra is
-# absent, h3_available is False and scan_h3 is None (we never call it).
+# absent, H3_AVAILABLE is False and scan_h3 is None (we never call it).
 try:
     from .client import scan_h3  # noqa: F401
-    h3_available = True
+    H3_AVAILABLE = True
 except ImportError:
-    h3_available = False
+    H3_AVAILABLE = False
     scan_h3 = None  # type: ignore
 
 logger = logging.getLogger(__name__)
@@ -2131,7 +2131,7 @@ class H3Auditor:
 
         # 3. Extras gate (must be after Alt-Svc check so we don't spam INFO
         # findings on every site that doesn't ship h3)
-        if not h3_available:
+        if not H3_AVAILABLE:
             return [build_h3_extras_missing_finding()]
 
         # 4. LSQUIC passive fingerprint — fires before the probe
