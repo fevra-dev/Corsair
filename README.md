@@ -156,6 +156,35 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.6.0 — HTTP/3 Validation (2026-05-07)
+
+**Headline:** First public scanner with end-to-end HTTP/3 security validation — 0-RTT replay detection (CVE-2024-39321) and HTTP/1.1 ↔ HTTP/3 security-header drift analysis in a single scan.
+
+**New optional subsystem:** `corsair/h3/` (gated behind `[h3]` extras)
+- `probe.py` — Alt-Svc → h3 target derivation; LSQUIC passive fingerprint (CVE-2025-54939).
+- `diff.py` — H1/H3 security-header diff over an 18-header allowlist (presence + value drift).
+- `findings.py` — 3 finding templates + PASS variants + INFO auxiliaries.
+- `client.py` — aioquic-backed single-connection QUIC HEAD probe; captures `max_early_data_size` from the TLS NewSessionTicket and the response status to `Early-Data: 1` (RFC 8470).
+- `auditor.py` — `H3Auditor` orchestrator with two-stage flow.
+
+**Findings:**
+- H3-001 (HIGH/LOW/PASS) — 0-RTT replay vulnerability, severity tiered by `(capability × hint-honored)` matrix.
+- H3-002 (MEDIUM/LOW/PASS) — HTTP/1.1 vs HTTP/3 security-header divergence.
+- H3-003 (CRITICAL) — LSQUIC pre-handshake DoS fingerprint (CVE-2025-54939).
+- H3-INCONCLUSIVE / H3-EXTRAS-MISSING (INFO).
+
+**CLI:** New flag `--h3-probe / --no-h3-probe` (default ON).
+
+**Install:** `pip install corsair-scan[h3]` enables HTTP/3 probing. Without the extra, `--h3-probe` emits a single INFO finding pointing to the install command.
+
+**Compliance:** OWASP A05/A06/A07; PCI-DSS 6.2.4/6.4.3; CWE-294/400/693/770; CVE-2024-39321 / CVE-2025-54939.
+
+**Tests:** ~73 new tests across `tests/test_h3_*.py` (70 unit + 3 integration; integration suite skipped automatically when `[h3]` extra absent).
+
+**Models:** `HeaderCategory.H3` enum value added.
+
+**Deferred to v0.6.1+:** QPACK `SETTINGS_MAX_FIELD_SECTION_SIZE` advertisement check, Alt-Svc-without-HSTS, Alt-Svc long max-age, Connection-ID rotation. Tracked in `~/.claude/projects/-Users-fevra-Apps-HeadScan/memory/project_h3_v060_scope.md`.
+
 ### v0.5.5 — Integrity-Policy Validation (2026-05-04)
 
 **Headline:** First public scanner with body-aware Integrity-Policy enforcement detection (IP-006).
