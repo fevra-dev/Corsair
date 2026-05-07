@@ -1384,8 +1384,19 @@ def _free_udp_port() -> int:
 
 
 @pytest.fixture
-def h3_server() -> Iterator[tuple[str, int, dict]]:
-    """Spawn an in-process aioquic H3 server. Yields (host, port, knobs)."""
+def h3_server(request) -> Iterator[tuple[str, int, dict]]:
+    """Spawn an in-process aioquic H3 server. Yields (host, port, knobs).
+
+    Indirect-parametrize friendly: pass a dict with `max_early_data_size`
+    (default 0) via @pytest.mark.parametrize("h3_server", [{...}], indirect=True)
+    when the test needs the server to issue a 0-RTT-capable session ticket.
+    The server's QuicConfiguration is finalized BEFORE serve() is called, so
+    the value must be known at fixture-setup time — knobs (mutated post-yield)
+    only control response status/headers per request.
+    """
+    params = getattr(request, "param", {}) if hasattr(request, "param") else {}
+    early_data_size = params.get("max_early_data_size", 0)
+
     cert_path, key_path = _generate_self_signed_cert()
     port = _free_udp_port()
     knobs: dict = {}
@@ -1393,8 +1404,8 @@ def h3_server() -> Iterator[tuple[str, int, dict]]:
 
     config = QuicConfiguration(is_client=False, alpn_protocols=H3_ALPN)
     config.load_cert_chain(cert_path, key_path)
-    if knobs.get("max_early_data_size", 0):
-        config.max_early_data_size = knobs["max_early_data_size"]
+    if early_data_size > 0:
+        config.max_early_data_size = early_data_size
 
     loop = asyncio.new_event_loop()
     server = None
@@ -1422,9 +1433,9 @@ def h3_server() -> Iterator[tuple[str, int, dict]]:
     try:
         yield ("127.0.0.1", port, knobs)
     finally:
+        # aioquic.asyncio.serve() returns a single QuicServer (not iterable).
         if server is not None:
-            for transport in server:
-                transport.close()
+            server.close()
         loop.call_soon_threadsafe(loop.stop)
         t.join(timeout=2)
 ```
@@ -1465,9 +1476,16 @@ def test_h3_client_handshake_and_head_request(h3_server):
     assert result.headers["strict-transport-security"] == "max-age=31536000"
 
 
+@pytest.mark.parametrize(
+    "h3_server", [{"max_early_data_size": 16384}], indirect=True
+)
 def test_h3_client_captures_session_ticket_capability(h3_server):
-    host, port, knobs = h3_server
-    knobs["max_early_data_size"] = 16384
+    """Server's QuicConfiguration must have max_early_data_size set BEFORE
+    serve() is called — see fixture docstring. We pass it through indirect
+    parametrize so the fixture can configure the QuicConfiguration before
+    the server starts, rather than mutating the knobs dict after yield.
+    """
+    host, port, _ = h3_server
 
     result = asyncio.run(scan_h3(
         url=f"https://{host}:{port}/",

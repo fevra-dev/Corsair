@@ -60,6 +60,10 @@ dependencies = [
 tls = [
     "sslyze>=6.0.0",
 ]
+# HTTP/3 validation (aioquic for QUIC + H3 client)
+h3 = [
+    "aioquic>=1.3.0,<2.0",
+]
 # Full installation with all features
 full = [
     "sslyze>=6.0.0",
