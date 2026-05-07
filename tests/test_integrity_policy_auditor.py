@@ -278,3 +278,103 @@ class TestFindingMetadataShape:
             assert f.reference_url.startswith("https://"), fid
         f6 = build_ip_006_finding([])
         assert f6.reference_url.startswith("https://")
+
+
+# ---------------------------------------------------------------------------
+# Scanner integration smoke test
+# ---------------------------------------------------------------------------
+
+from unittest.mock import patch
+
+
+class TestScannerIntegration:
+    def test_ip_006_emitted_via_full_pipeline(self):
+        """End-to-end smoke: headers stubbed at HeadScanner._fetch_headers,
+        Stage 2 body fetch stubbed at integrity_policy.auditor._fetch_body
+        (auditor imports the name into its own namespace). Upstream
+        cache/cors/fm auditors are stubbed so the test does not hit the network.
+        """
+        from corsair.scanner import HeadScanner
+
+        ip_headers = {
+            "Integrity-Policy": "blocked-destinations=(script)",
+            "Content-Type": "text/html",
+        }
+        body_html = (
+            '<html><body>'
+            '<script src="https://cdn.example.net/tag.js"></script>'
+            '</body></html>'
+        )
+
+        with patch.object(
+            HeadScanner,
+            "_fetch_headers",
+            return_value=(200, ip_headers, "https://example.com/", None),
+        ), patch(
+            "corsair.integrity_policy.auditor._fetch_body",
+            return_value=(body_html, None),
+        ), patch(
+            "corsair.cache.auditor.CacheAuditor.audit", return_value=[]
+        ), patch(
+            "corsair.cors.auditor.CORSAuditor.audit", return_value=[]
+        ), patch(
+            "corsair.fetch_metadata.FetchMetadataAuditor.audit", return_value=[]
+        ):
+            scanner = HeadScanner(
+                timeout=10,
+                cache_probe=False,
+                cors_probe=False,
+                fm_probe=False,
+                ip_probe=True,
+            )
+            result = scanner.scan_target("https://example.com/")
+
+        ip6_findings = [
+            f for f in result.findings
+            if f.title.startswith("Enforcing Integrity-Policy")
+        ]
+        assert len(ip6_findings) == 1
+
+
+# ---------------------------------------------------------------------------
+# Regression: REPORT-004 (v0.5.4) still fires on the same fixture
+# ---------------------------------------------------------------------------
+
+class TestV054Coexistence:
+    def test_report_004_still_fires_when_ip_endpoints_orphaned(self):
+        """When Integrity-Policy references an undefined endpoint, REPORT-004
+        from corsair/analyzers/reporting.py must still fire even though the
+        new IntegrityPolicyAuditor also runs on the same headers. The two
+        subsystems address different misconfigurations; they must not collide.
+        """
+        from corsair.analyzers.reporting import ReportingCoherenceAnalyzer
+
+        headers = {
+            # Integrity-Policy references 'missing-endpoint' but no Reporting-
+            # Endpoints header defines it. v0.5.4 REPORT-004 owns this.
+            "Integrity-Policy": (
+                "blocked-destinations=(script), endpoints=(missing-endpoint)"
+            ),
+            "Content-Type": "text/html",
+        }
+        analyzer = ReportingCoherenceAnalyzer(headers, "https://example.com/")
+        report_findings = analyzer.analyze()
+        # REPORT-004 emits "Integrity-Policy Monitoring Failure" (HIGH) for
+        # orphaned endpoints. Match by title prefix + severity to stay robust
+        # against future copy edits.
+        report_004 = [
+            f for f in report_findings
+            if f.title.startswith("Integrity-Policy")
+            and f.severity == Severity.HIGH
+        ]
+        assert len(report_004) >= 1, (
+            "REPORT-004 must still fire on orphaned endpoints; the new "
+            "IntegrityPolicyAuditor does not own this misconfiguration."
+        )
+
+        # And the new auditor (with active=False so we don't hit the network)
+        # contributes its own static finding without erasing REPORT-004.
+        ip_auditor = IntegrityPolicyAuditor(timeout=10, active=False)
+        ip_findings = ip_auditor.audit("https://example.com/", headers)
+        # Static path: 'script' present in blocked-destinations -> static PASS.
+        assert any(f.severity == Severity.PASS for f in ip_findings)

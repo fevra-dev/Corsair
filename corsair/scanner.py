@@ -35,6 +35,7 @@ class HeadScanner:
         cors_probe: bool = True,
         cors_evil_origin: str = "https://evil.example",
         fm_probe: bool = True,
+        ip_probe: bool = True,
     ):
         """
         Initialize scanner.
@@ -47,6 +48,8 @@ class HeadScanner:
             cache_probe: Whether to run active cache poisoning probes
             cors_probe: Whether to run active CORS reflection probes
             cors_evil_origin: Origin value used by the attacker-origin probe
+            fm_probe: Whether to run Fetch Metadata enforcement probing
+            ip_probe: Whether to run Integrity-Policy active body fetch
         """
         self.timeout = timeout
         self.follow_redirects = follow_redirects
@@ -56,6 +59,7 @@ class HeadScanner:
         self.cors_probe = cors_probe
         self.cors_evil_origin = cors_evil_origin
         self.fm_probe = fm_probe
+        self.ip_probe = ip_probe
 
         logger.info(
             f"Scanner initialized: timeout={timeout}s, " f"follow_redirects={follow_redirects}"
@@ -205,6 +209,19 @@ class HeadScanner:
             findings.extend(fm_findings)
         except Exception as e:
             logger.error(f"Fetch Metadata audit failed: {e}")
+
+        # Integrity-Policy validation
+        try:
+            from .integrity_policy import IntegrityPolicyAuditor
+            ip_auditor = IntegrityPolicyAuditor(
+                timeout=self.timeout,
+                active=self.ip_probe,
+                user_agent=self.user_agent,
+            )
+            ip_findings = ip_auditor.audit(final_url, headers)
+            findings.extend(ip_findings)
+        except Exception as e:
+            logger.error(f"Integrity-Policy audit failed: {e}")
 
         # Calculate score
         score = calculate_score(findings)
