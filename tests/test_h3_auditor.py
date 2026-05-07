@@ -275,7 +275,6 @@ class TestFindingMetadataShape:
 # ---------------------------------------------------------------------------
 
 class TestScannerIntegration:
-    @pytest.mark.skip(reason="HeadScanner.h3_probe param wired in Task 7")
     def test_h3_finding_emitted_via_full_pipeline(self):
         from corsair.scanner import HeadScanner
 

@@ -36,6 +36,7 @@ class HeadScanner:
         cors_evil_origin: str = "https://evil.example",
         fm_probe: bool = True,
         ip_probe: bool = True,
+        h3_probe: bool = True,
     ):
         """
         Initialize scanner.
@@ -50,6 +51,7 @@ class HeadScanner:
             cors_evil_origin: Origin value used by the attacker-origin probe
             fm_probe: Whether to run Fetch Metadata enforcement probing
             ip_probe: Whether to run Integrity-Policy active body fetch
+            h3_probe: Whether to run HTTP/3 validation (requires [h3] extra)
         """
         self.timeout = timeout
         self.follow_redirects = follow_redirects
@@ -60,6 +62,7 @@ class HeadScanner:
         self.cors_evil_origin = cors_evil_origin
         self.fm_probe = fm_probe
         self.ip_probe = ip_probe
+        self.h3_probe = h3_probe
 
         logger.info(
             f"Scanner initialized: timeout={timeout}s, " f"follow_redirects={follow_redirects}"
@@ -222,6 +225,19 @@ class HeadScanner:
             findings.extend(ip_findings)
         except Exception as e:
             logger.error(f"Integrity-Policy audit failed: {e}")
+
+        # HTTP/3 validation
+        try:
+            from .h3 import H3Auditor
+            h3_auditor = H3Auditor(
+                timeout=self.timeout,
+                active=self.h3_probe,
+                user_agent=self.user_agent,
+            )
+            h3_findings = h3_auditor.audit(final_url, headers)
+            findings.extend(h3_findings)
+        except Exception as e:
+            logger.error(f"H3 audit failed: {e}")
 
         # Calculate score
         score = calculate_score(findings)
