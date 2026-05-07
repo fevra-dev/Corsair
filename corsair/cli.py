@@ -173,6 +173,7 @@ def cli(ctx, version):
 @click.option("--cors-probe/--no-cors-probe", default=True, help="Run CORS DAST probing")
 @click.option("--fm-probe/--no-fm-probe", default=True, help="Run Fetch Metadata enforcement probing")
 @click.option("--ip-probe/--no-ip-probe", default=True, help="Run Integrity-Policy validation")
+@click.option("--h3-probe/--no-h3-probe", default=True, help="Run HTTP/3 validation (requires `pip install corsair-scan[h3]`)")
 @click.option(
     "--cors-evil-origin",
     default="https://evil.example",
@@ -199,6 +200,7 @@ def scan(
     cors_probe: bool,
     fm_probe: bool,
     ip_probe: bool,
+    h3_probe: bool,
     cors_evil_origin: str,
 ) -> None:
     """Scan HTTP security headers for target URLs.
@@ -245,6 +247,7 @@ def scan(
         cors_evil_origin=cors_evil_origin,
         fm_probe=fm_probe,
         ip_probe=ip_probe,
+        h3_probe=h3_probe,
     )
 
     # Run scan
