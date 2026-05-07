@@ -172,6 +172,7 @@ def cli(ctx, version):
 @click.option("--cache-probe/--no-cache-probe", default=True, help="Run cache poisoning detection")
 @click.option("--cors-probe/--no-cors-probe", default=True, help="Run CORS DAST probing")
 @click.option("--fm-probe/--no-fm-probe", default=True, help="Run Fetch Metadata enforcement probing")
+@click.option("--ip-probe/--no-ip-probe", default=True, help="Run Integrity-Policy validation")
 @click.option(
     "--cors-evil-origin",
     default="https://evil.example",
@@ -197,6 +198,7 @@ def scan(
     cache_probe: bool,
     cors_probe: bool,
     fm_probe: bool,
+    ip_probe: bool,
     cors_evil_origin: str,
 ) -> None:
     """Scan HTTP security headers for target URLs.
@@ -242,6 +244,7 @@ def scan(
         cors_probe=cors_probe,
         cors_evil_origin=cors_evil_origin,
         fm_probe=fm_probe,
+        ip_probe=ip_probe,
     )
 
     # Run scan

@@ -156,6 +156,31 @@ Active probing uses cache busters to isolate test requests and includes a safety
 
 ## Changelog
 
+### v0.5.5 — Integrity-Policy Validation (2026-05-04)
+
+**Headline:** First public scanner with body-aware Integrity-Policy enforcement detection (IP-006).
+
+**New subsystem:** `corsair/integrity_policy/`
+- `parser.py` — RFC 9651 SF Dictionary parser for Integrity-Policy / Integrity-Policy-Report-Only; HTML Content-Type discriminator.
+- `body.py` — Sync httpx GET (capped at 1 MB) + cross-origin <script> extraction (exact scheme/host/port match).
+- `findings.py` — 5 finding templates + 3 PASS variants + 1 INCONCLUSIVE.
+- `auditor.py` — `IntegrityPolicyAuditor` two-stage flow: static parse always runs, body fetch gated on enforcing+script+HTML.
+
+**Findings:**
+- IP-001 (LOW, 3pt) — Integrity-Policy and Integrity-Policy-Report-Only both absent.
+- IP-002 (INFO, 0pt) — Report-Only set without enforcing counterpart.
+- IP-003 (LOW, 2pt) — Header set but unparseable or no recognized destinations.
+- IP-004 (LOW, 3pt) — `script` missing from `blocked-destinations`.
+- IP-006 (HIGH, 10pt) — Enforcing IP + cross-origin scripts lacking `integrity` (page-breaking).
+
+**CLI:** New flag `--ip-probe / --no-ip-probe` (default ON).
+
+**Compliance:** OWASP A08, NIST SI-7, PCI-DSS 6.4.3; CWE-353/494/829.
+
+**Tests:** ~70 new tests across `tests/test_integrity_policy_*.py` plus 1 v0.5.4 coexistence regression for REPORT-004.
+
+**Models:** `HeaderCategory.INTEGRITY` enum value added.
+
 ### v0.5.4 — Reporting-Endpoints Coherence Detection
 
 **Released:** 2026-05-03
