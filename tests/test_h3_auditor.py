@@ -227,6 +227,28 @@ class TestInconclusive:
         assert len(inconclusive) == 1
         assert error in inconclusive[0].current_value
 
+    def test_inconclusive_when_status_none_and_no_error(self):
+        """Connection succeeded (error=None) but no response status captured —
+        treat as INCONCLUSIVE rather than misclassifying as H3-001 LOW.
+        Reviewer-flagged Important issue I-1 from final code review."""
+        result = H3ScanResult(
+            url="https://example.com/",
+            status=None,        # no response stream
+            headers={},
+            early_data_capability=0,
+            error=None,         # but the QUIC connection itself succeeded
+        )
+        h1 = {"Alt-Svc": 'h3=":443"'}
+        with patch("corsair.h3.auditor.scan_h3", AsyncMock(return_value=result)):
+            a = H3Auditor(timeout=5)
+            findings = a.audit("https://example.com/", h1)
+        # Exactly one INCONCLUSIVE; no H3-001 of any tier.
+        inconclusive = [f for f in findings if "inconclusive" in f.title.lower()]
+        h3_001 = [f for f in findings if "0-RTT" in f.title]
+        assert len(inconclusive) == 1
+        assert h3_001 == []
+        assert "no response status" in inconclusive[0].current_value
+
 
 # ---------------------------------------------------------------------------
 # Top-level exception handler

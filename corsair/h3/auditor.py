@@ -103,6 +103,16 @@ class H3Auditor:
             findings.append(build_h3_inconclusive_finding(error=result.error))
             return findings
 
+        # 6b. Connection succeeded but no response status arrived (e.g., the
+        # response stream timed out mid-flight). Treat as INCONCLUSIVE rather
+        # than letting the 0-RTT classifier mistake the absence of 425 for a
+        # missing hint-rejection — that would emit a misleading H3-001 LOW.
+        if result.status is None:
+            findings.append(build_h3_inconclusive_finding(
+                error="probe completed but no response status captured"
+            ))
+            return findings
+
         # 7. 0-RTT evaluation
         capability = result.early_data_capability > 0
         hint_rejected = (result.status == 425)

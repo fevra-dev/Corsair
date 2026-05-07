@@ -103,11 +103,17 @@ def h3_server(request) -> Iterator[tuple[str, int, dict]]:
     """Spawn an in-process aioquic H3 server. Yields (host, port, knobs).
 
     Indirect-parametrize friendly: pass a dict with `max_early_data_size`
-    (default 0) via @pytest.mark.parametrize("h3_server", [{...}], indirect=True)
-    when the test needs the server to issue a 0-RTT-capable session ticket.
-    The server's QuicConfiguration is finalized BEFORE serve() is called, so
-    the value must be known at fixture-setup time — knobs (mutated post-yield)
-    only control response status/headers per request.
+    (truthy = 0-RTT enabled) via @pytest.mark.parametrize("h3_server",
+    [{...}], indirect=True). The integer value itself is unused — aioquic
+    1.3.0 hardcodes the advertised value to MAX_EARLY_DATA (0xFFFFFFFF) on
+    the server side regardless of QuicConfiguration content (see
+    aioquic/quic/connection.py:1452). What matters is whether
+    session_ticket_handler is wired into serve(), which is what enables
+    NEW_SESSION_TICKET emission. We use the parametrize value as a boolean
+    toggle for that wiring.
+
+    The knobs dict (mutated post-yield) only controls response
+    status/headers per request.
     """
     params = getattr(request, "param", {}) if hasattr(request, "param") else {}
     early_data_size = params.get("max_early_data_size", 0)
@@ -118,8 +124,6 @@ def h3_server(request) -> Iterator[tuple[str, int, dict]]:
 
     config = QuicConfiguration(is_client=False, alpn_protocols=H3_ALPN)
     config.load_cert_chain(cert_path, key_path)
-    if early_data_size > 0:
-        config.max_early_data_size = early_data_size
 
     loop = asyncio.new_event_loop()
     server = None
